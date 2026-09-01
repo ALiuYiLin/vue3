@@ -17,7 +17,6 @@ import {
   isArray,
   isFunction,
   isObject,
-  isOn,
   isReservedProp,
   isString,
   isSymbol,
@@ -34,10 +33,6 @@ import {
 } from './component'
 import { isEmitListener } from './componentEmits'
 import type { AppContext } from './apiCreateApp'
-import { createPropsDefaultThis } from './compat/props'
-import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/compatConfig'
-import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
@@ -282,11 +277,7 @@ export function updateProps(
   // attrs point to the same object so it should already have been updated.
   if (attrs !== rawCurrentProps) {
     for (const key in attrs) {
-      if (
-        !rawProps ||
-        (!hasOwn(rawProps, key) &&
-          (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
-      ) {
+      if (!rawProps || !hasOwn(rawProps, key)) {
         delete attrs[key]
         hasAttrsChanged = true
       }
@@ -327,19 +318,6 @@ function setFullProps(
         }
       }
 
-      if (__COMPAT__) {
-        if (key.startsWith('onHook:')) {
-          softAssertCompatEnabled(
-            DeprecationTypes.INSTANCE_EVENT_HOOKS,
-            instance,
-            key.slice(2).toLowerCase(),
-          )
-        }
-        if (key === 'inline-template') {
-          continue
-        }
-      }
-
       const value = rawProps[key]
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
@@ -354,13 +332,6 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
-        if (__COMPAT__) {
-          if (isOn(key) && key.endsWith('Native')) {
-            key = key.slice(0, -6) // remove Native postfix
-          } else if (shouldSkipAttr(key, instance)) {
-            continue
-          }
-        }
         if (!(key in attrs) || value !== attrs[key]) {
           attrs[key] = value
           hasAttrsChanged = true
@@ -412,13 +383,7 @@ function resolvePropValue(
           value = propsDefaults[key]
         } else {
           const reset = setCurrentInstance(instance)
-          value = propsDefaults[key] = defaultValue.call(
-            __COMPAT__ &&
-              isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
-              ? createPropsDefaultThis(instance, props, key)
-              : null,
-            props,
-          )
+          value = propsDefaults[key] = defaultValue.call(null, props)
           reset()
         }
       } else {
@@ -466,9 +431,6 @@ export function normalizePropsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
-      if (__COMPAT__ && isFunction(raw)) {
-        raw = raw.options
-      }
       hasExtends = true
       const [props, keys] = normalizePropsOptions(raw, appContext, true)
       extend(normalized, props)

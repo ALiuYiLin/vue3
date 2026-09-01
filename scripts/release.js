@@ -92,7 +92,7 @@ const sortPackagesForPublishing = (/** @type {string[]} */ packageNames) => [
 const isCorePackage = (/** @type {string} */ pkgName) => {
   if (!pkgName) return
 
-  if (pkgName === 'vue' || pkgName === '@vue/compat') {
+  if (pkgName === 'vue') {
     return true
   }
 

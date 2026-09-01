@@ -6,22 +6,19 @@ import { spawn } from 'node:child_process'
 
 const require = createRequire(import.meta.url)
 
-export const targets = fs
-  .readdirSync('packages')
-  .filter(f => {
-    if (
-      !fs.statSync(`packages/${f}`).isDirectory() ||
-      !fs.existsSync(`packages/${f}/package.json`)
-    ) {
-      return false
-    }
-    const pkg = require(`../packages/${f}/package.json`)
-    if (pkg.private && !pkg.buildOptions) {
-      return false
-    }
-    return true
-  })
-  .concat('template-explorer')
+export const targets = fs.readdirSync('packages').filter(f => {
+  if (
+    !fs.statSync(`packages/${f}`).isDirectory() ||
+    !fs.existsSync(`packages/${f}/package.json`)
+  ) {
+    return false
+  }
+  const pkg = require(`../packages/${f}/package.json`)
+  if (pkg.private && !pkg.buildOptions) {
+    return false
+  }
+  return true
+})
 
 /**
  *

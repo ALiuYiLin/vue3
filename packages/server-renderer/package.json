@@ -49,7 +49,6 @@
     "vue": "workspace:*"
   },
   "dependencies": {
-    "@vue/shared": "workspace:*",
-    "@vue/compiler-ssr": "workspace:*"
+    "@vue/shared": "workspace:*"
   }
 }

@@ -110,7 +110,7 @@ export default defineConfig(
 
   // Packages targeting DOM
   {
-    files: ['packages/{vue,vue-compat,runtime-dom}/**'],
+    files: ['packages/{vue,runtime-dom}/**'],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
     },
@@ -118,23 +118,10 @@ export default defineConfig(
 
   // Packages targeting Node
   {
-    files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
+    files: ['packages/server-renderer/**'],
     rules: {
       'no-restricted-globals': ['error', ...DOMGlobals],
       'no-restricted-syntax': ['error', banConstEnum],
-    },
-  },
-
-  // Private package, browser only + no syntax restrictions
-  {
-    files: [
-      'packages-private/template-explorer/**',
-      'packages-private/sfc-playground/**',
-    ],
-    rules: {
-      'no-restricted-globals': ['error', ...NodeGlobals],
-      'no-restricted-syntax': ['error', banConstEnum],
-      'no-console': 'off',
     },
   },
 
@@ -161,14 +148,6 @@ export default defineConfig(
       'no-restricted-globals': 'off',
       'no-restricted-syntax': ['error', banConstEnum],
       'no-console': 'off',
-    },
-  },
-
-  // Import nodejs modules in compiler-sfc
-  {
-    files: ['packages/compiler-sfc/src/**'],
-    rules: {
-      'import-x/no-nodejs-modules': ['error', { allow: builtinModules }],
     },
   },
 

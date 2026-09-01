@@ -32,7 +32,6 @@ const require = createRequire(import.meta.url)
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 const masterVersion = require('./package.json').version
-const consolidatePkg = require('@vue/consolidate/package.json')
 
 const privatePackages = fs.readdirSync('packages-private')
 const pkgBase = privatePackages.includes(process.env.TARGET)
@@ -135,15 +134,13 @@ function createConfig(format, output, plugins = []) {
   const isServerRenderer = name === 'server-renderer'
   const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
-  const isCompatPackage = pkg.name === '@vue/compat'
-  const isCompatBuild = !!packageOptions.compat
   const isBrowserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
   output.banner = banner
 
-  output.exports = isCompatPackage ? 'auto' : 'named'
+  output.exports = 'named'
   if (isCJSBuild) {
     output.esModule = true
   }
@@ -157,15 +154,6 @@ function createConfig(format, output, plugins = []) {
   }
 
   let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
-
-  // the compat build needs both default AND named exports. This will cause
-  // Rollup to complain for non-ESM targets, so we use separate entries for
-  // esm vs. non-esm builds.
-  if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
-    entryFile = /runtime$/.test(format)
-      ? `src/esm-runtime.ts`
-      : `src/esm-index.ts`
-  }
 
   function resolveDefine() {
     /** @type {Record<string, string>} */
@@ -183,9 +171,6 @@ function createConfig(format, output, plugins = []) {
       __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
       __SSR__: String(!isGlobalBuild),
-
-      // 2.x compat build
-      __COMPAT__: String(isCompatBuild),
 
       // feature flags
       __FEATURE_SUSPENSE__: `true`,
@@ -226,8 +211,6 @@ function createConfig(format, output, plugins = []) {
       Object.assign(replacements, {
         'context.onError(': `/*@__PURE__*/ context.onError(`,
         'emitError(': `/*@__PURE__*/ emitError(`,
-        'createCompilerError(': `/*@__PURE__*/ createCompilerError(`,
-        'createDOMCompilerError(': `/*@__PURE__*/ createDOMCompilerError(`,
       })
     }
 
@@ -235,15 +218,6 @@ function createConfig(format, output, plugins = []) {
       Object.assign(replacements, {
         // preserve to be handled by bundlers
         __DEV__: `!!(process.env.NODE_ENV !== 'production')`,
-      })
-    }
-
-    // for compiler-sfc browser build inlined deps
-    if (isBrowserESMBuild) {
-      Object.assign(replacements, {
-        'process.env': '({})',
-        'process.platform': '""',
-        'process.stdout': 'null',
       })
     }
 
@@ -262,19 +236,18 @@ function createConfig(format, output, plugins = []) {
       'entities/decode',
     ]
 
-    if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
+    if (isGlobalBuild || isBrowserESMBuild) {
       if (!packageOptions.enableNonBrowserBranches) {
         // normal browser builds - non-browser only imports are tree-shaken,
         // they are only listed here to suppress warnings.
         return treeShakenDeps
       }
     } else {
-      // Node / esm-bundler builds.
-      // externalize all direct deps unless it's the compat build.
+      // Node / esm-bundler builds: externalize all direct deps.
       return [
         ...Object.keys(pkg.dependencies || {}),
         ...Object.keys(pkg.peerDependencies || {}),
-        // for @vue/compiler-sfc / server-renderer
+        // for server-renderer
         ...['path', 'url', 'stream'],
         // somehow these throw warnings for runtime-* package builds
         ...treeShakenDeps,
@@ -283,22 +256,8 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveNodePlugins() {
-    // we are bundling forked consolidate.js in compiler-sfc which dynamically
-    // requires a ton of template engines which should be ignored.
     /** @type {ReadonlyArray<string>} */
     let cjsIgnores = []
-    if (pkg.name === '@vue/compiler-sfc') {
-      cjsIgnores = [
-        ...Object.keys(consolidatePkg.devDependencies),
-        'vm',
-        'crypto',
-        'react-dom/server',
-        'teacup/lib/express',
-        'arc-templates/dist/es5',
-        'then-pug',
-        'then-jade',
-      ]
-    }
 
     const nodePlugins =
       (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||

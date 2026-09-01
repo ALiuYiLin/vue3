@@ -17,7 +17,6 @@ export default defineConfig({
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
     __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
-    __COMPAT__: true,
   },
   resolve: {
     alias: entries,
@@ -35,7 +34,6 @@ export default defineConfig({
       include: ['packages/*/src/**'],
       exclude: [
         // entries that are not really used during tests
-        'packages/vue-compat/**',
         'packages/vue/src/dev.ts',
         'packages/vue/src/runtime.ts',
         // not testable during unit tests
@@ -56,7 +54,7 @@ export default defineConfig({
           exclude: [
             ...configDefaults.exclude,
             '**/e2e/**',
-            '**/{vue,vue-compat,runtime-dom}/**',
+            '**/{vue,runtime-dom}/**',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
           ],
         },
@@ -74,7 +72,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit-jsdom',
-          include: ['packages/{vue,vue-compat,runtime-dom}/**/*.{test,spec}.*'],
+          include: ['packages/{vue,runtime-dom}/**/*.{test,spec}.*'],
           exclude: [...configDefaults.exclude, '**/e2e/**'],
           environment: 'jsdom',
         },

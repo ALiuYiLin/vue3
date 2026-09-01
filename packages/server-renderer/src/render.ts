@@ -27,7 +27,6 @@ import {
   isVoidTag,
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
-import { ssrCompile } from './helpers/ssrCompile'
 
 const {
   createComponentInstance,
@@ -137,15 +136,6 @@ function renderComponentSubTree(
     }
     renderVNode(push, (instance.subTree = root), instance, slotScopeId)
   } else {
-    if (
-      (!instance.render || instance.render === NOOP) &&
-      !instance.ssrRender &&
-      !comp.ssrRender &&
-      isString(comp.template)
-    ) {
-      comp.ssrRender = ssrCompile(comp.template, instance)
-    }
-
     const ssrRender = instance.ssrRender || comp.ssrRender
     if (ssrRender) {
       // optimized

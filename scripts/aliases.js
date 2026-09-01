@@ -15,12 +15,10 @@ const dirs = readdirSync(new URL('../packages', import.meta.url))
 /** @type {Record<string, string>} */
 const entries = {
   vue: resolveEntryForPkg('vue'),
-  'vue/compiler-sfc': resolveEntryForPkg('compiler-sfc'),
   'vue/server-renderer': resolveEntryForPkg('server-renderer'),
-  '@vue/compat': resolveEntryForPkg('vue-compat'),
 }
 
-const nonSrcPackages = ['sfc-playground', 'template-explorer', 'dts-test']
+const nonSrcPackages = ['runtime-test']
 
 for (const dir of dirs) {
   const key = `@vue/${dir}`

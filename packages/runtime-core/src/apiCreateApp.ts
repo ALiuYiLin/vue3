@@ -24,7 +24,6 @@ import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
-import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
@@ -105,17 +104,6 @@ export interface App<HostElement = any> {
    * @internal custom element vnode
    */
   _ceVNode?: VNode
-
-  /**
-   * v2 compat only
-   */
-  filter?(name: string): Function | undefined
-  filter?(name: string, filter: Function): this
-
-  /**
-   * @internal v3 compat only
-   */
-  _createRoot?(options: ComponentOptions): ComponentPublicInstance
 }
 
 export type OptionMergeFunction = (to: unknown, from: unknown) => any
@@ -477,10 +465,6 @@ export function createAppAPI<HostElement>(
         }
       },
     })
-
-    if (__COMPAT__) {
-      installAppCompatProperties(app, context, render)
-    }
 
     return app
   }

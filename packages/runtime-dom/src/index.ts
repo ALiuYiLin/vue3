@@ -1,14 +1,12 @@
 import {
   type App,
   type CreateAppFunction,
-  DeprecationTypes,
   type Directive,
   type ElementNamespace,
   type HydrationRenderer,
   type Renderer,
   type RootHydrateFunction,
   type RootRenderFunction,
-  compatUtils,
   createHydrationRenderer,
   createRenderer,
   isRuntimeOnly,
@@ -111,19 +109,6 @@ export const createApp = ((...args) => {
       // The user must make sure the in-DOM template is trusted. If it's
       // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
-      // 2.x compat check
-      if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
-        for (let i = 0; i < (container as Element).attributes.length; i++) {
-          const attr = (container as Element).attributes[i]
-          if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
-            compatUtils.warnDeprecation(
-              DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
-              null,
-            )
-            break
-          }
-        }
-      }
     }
 
     // clear content before mounting

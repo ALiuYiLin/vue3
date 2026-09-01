@@ -1,8 +1,7 @@
-import {
-  type ComponentInternalInstance,
-  type Data,
-  type FunctionalComponent,
-  getComponentName,
+import type {
+  ComponentInternalInstance,
+  Data,
+  FunctionalComponent,
 } from './component'
 import {
   Comment,
@@ -25,11 +24,6 @@ import { warn } from './warning'
 import type { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
 import { setCurrentRenderingInstance } from './componentRenderContext'
-import {
-  DeprecationTypes,
-  isCompatEnabled,
-  warnDeprecation,
-} from './compat/compatConfig'
 import { shallowReadonly } from '@vue/reactivity'
 
 /**
@@ -192,33 +186,6 @@ export function renderComponentRoot(
           )
         }
       }
-    }
-  }
-
-  if (
-    __COMPAT__ &&
-    isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
-    root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
-  ) {
-    const { class: cls, style } = vnode.props || {}
-    if (cls || style) {
-      if (__DEV__ && inheritAttrs === false) {
-        warnDeprecation(
-          DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
-          instance,
-          getComponentName(instance.type),
-        )
-      }
-      root = cloneVNode(
-        root,
-        {
-          class: cls,
-          style: style,
-        },
-        false,
-        true,
-      )
     }
   }
 

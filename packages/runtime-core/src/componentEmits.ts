@@ -24,11 +24,6 @@ import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { warn } from './warning'
 import { devtoolsComponentEmit } from './devtools'
 import type { AppContext } from './apiCreateApp'
-import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
-import {
-  compatModelEmit,
-  compatModelEventPrefix,
-} from './compat/componentVModel'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
 import type { ComponentPublicInstance } from './componentPublicInstance'
@@ -124,14 +119,7 @@ export function emit(
       propsOptions: [propsOptions],
     } = instance
     if (emitsOptions) {
-      if (
-        !(event in emitsOptions) &&
-        !(
-          __COMPAT__ &&
-          (event.startsWith('hook:') ||
-            event.startsWith(compatModelEventPrefix))
-        )
-      ) {
+      if (!(event in emitsOptions)) {
         if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
@@ -153,12 +141,8 @@ export function emit(
   }
 
   let args = rawArgs
-  const isCompatModelListener =
-    __COMPAT__ && compatModelEventPrefix + event in props
-  const isModelListener = isCompatModelListener || event.startsWith('update:')
-  const modifiers = isCompatModelListener
-    ? props.modelModifiers
-    : isModelListener && getModelModifiers(props, event.slice(7))
+  const isModelListener = event.startsWith('update:')
+  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
 
   // for v-model update:xxx events, apply modifiers on args
   if (modifiers) {
@@ -226,11 +210,6 @@ export function emit(
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
     )
-  }
-
-  if (__COMPAT__) {
-    compatModelEmit(instance, event, args)
-    return compatInstanceEmit(instance, event, args)
   }
 }
 
@@ -301,9 +280,6 @@ export function isEmitListener(
     return false
   }
 
-  if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
-    return true
-  }
   key = key.slice(2)
   // #8342 the `.once` modifier appends a `Once` suffix. Preserve the exact event
   // name `once`, while still stripping the suffix from `onOnceOnce`.
