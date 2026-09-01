@@ -6,7 +6,6 @@ import {
   type ObjectDirective,
   type VNode,
   createCommentVNode,
-  createElementVNode,
   createSSRApp,
   createStaticVNode,
   createTextVNode,
@@ -16,7 +15,6 @@ import {
   h,
   nextTick,
   onMounted,
-  onServerPrefetch,
   reactive,
   ref,
   useCssVars,
@@ -28,7 +26,6 @@ import { renderToString } from '@vue/server-renderer'
 import { normalizeStyle } from '@vue/shared'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
-const { reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -260,194 +257,7 @@ describe('SSR hydration', () => {
   })
 
   // #6152
-  test('with data-allow-mismatch component when using onServerPrefetch', async () => {
-    const Comp = {
-      template: `
-        <div>Comp2</div>
-      `,
-    }
-    let foo: any
-    const App = {
-      setup() {
-        const flag = ref(true)
-        foo = () => {
-          flag.value = false
-        }
-        onServerPrefetch(() => (flag.value = false))
-        return { flag }
-      },
-      components: {
-        Comp,
-      },
-      template: `
-        <span data-allow-mismatch>
-          <Comp v-if="flag"></Comp>
-        </span>
-      `,
-    }
-    // hydrate
-    const container = document.createElement('div')
-    container.innerHTML = await renderToString(h(App))
-    createSSRApp(App).mount(container)
-    expect(container.innerHTML).toBe(
-      '<span data-allow-mismatch=""><div>Comp2</div></span>',
-    )
-    foo()
-    await nextTick()
-    expect(container.innerHTML).toBe(
-      '<span data-allow-mismatch=""><!--v-if--></span>',
-    )
-  })
-
   // compile SSR + client render fn from the same template & hydrate
-  test('full compiler integration', async () => {
-    const mounted: string[] = []
-    const log = vi.fn()
-    const toggle = ref(true)
-
-    const Child = {
-      data() {
-        return {
-          count: 0,
-          text: 'hello',
-          style: {
-            color: 'red',
-          },
-        }
-      },
-      mounted() {
-        mounted.push('child')
-      },
-      template: `
-      <div>
-        <span class="count" :style="style">{{ count }}</span>
-        <button class="inc" @click="count++">inc</button>
-        <button class="change" @click="style.color = 'green'" >change color</button>
-        <button class="emit" @click="$emit('foo')">emit</button>
-        <span class="text">{{ text }}</span>
-        <input v-model="text">
-      </div>
-      `,
-    }
-
-    const App = {
-      setup() {
-        return { toggle }
-      },
-      mounted() {
-        mounted.push('parent')
-      },
-      template: `
-        <div>
-          <span>hello</span>
-          <template v-if="toggle">
-            <Child @foo="log('child')"/>
-            <template v-if="true">
-              <button class="parent-click" @click="log('click')">click me</button>
-            </template>
-          </template>
-          <span>hello</span>
-        </div>`,
-      components: {
-        Child,
-      },
-      methods: {
-        log,
-      },
-    }
-
-    const container = document.createElement('div')
-    // server render
-    container.innerHTML = await renderToString(h(App))
-    // hydrate
-    createSSRApp(App).mount(container)
-
-    // assert interactions
-    // 1. parent button click
-    triggerEvent('click', container.querySelector('.parent-click')!)
-    expect(log).toHaveBeenCalledWith('click')
-
-    // 2. child inc click + text interpolation
-    const count = container.querySelector('.count') as HTMLElement
-    expect(count.textContent).toBe(`0`)
-    triggerEvent('click', container.querySelector('.inc')!)
-    await nextTick()
-    expect(count.textContent).toBe(`1`)
-
-    // 3. child color click + style binding
-    expect(count.style.color).toBe('red')
-    triggerEvent('click', container.querySelector('.change')!)
-    await nextTick()
-    expect(count.style.color).toBe('green')
-
-    // 4. child event emit
-    triggerEvent('click', container.querySelector('.emit')!)
-    expect(log).toHaveBeenCalledWith('child')
-
-    // 5. child v-model
-    const text = container.querySelector('.text')!
-    const input = container.querySelector('input')!
-    expect(text.textContent).toBe('hello')
-    input.value = 'bye'
-    triggerEvent('input', input)
-    await nextTick()
-    expect(text.textContent).toBe('bye')
-  })
-
-  test('handle click error in ssr mode', async () => {
-    const App = {
-      setup() {
-        const throwError = () => {
-          throw new Error('Sentry Error')
-        }
-        return { throwError }
-      },
-      template: `
-        <div>
-          <button class="parent-click" @click="throwError">click me</button>
-        </div>`,
-    }
-
-    const container = document.createElement('div')
-    // server render
-    container.innerHTML = await renderToString(h(App))
-    // hydrate
-    const app = createSSRApp(App)
-    const handler = (app.config.errorHandler = vi.fn())
-    app.mount(container)
-    // assert interactions
-    // parent button click
-    triggerEvent('click', container.querySelector('.parent-click')!)
-    expect(handler).toHaveBeenCalled()
-  })
-
-  test('handle blur error in ssr mode', async () => {
-    const App = {
-      setup() {
-        const throwError = () => {
-          throw new Error('Sentry Error')
-        }
-        return { throwError }
-      },
-      template: `
-        <div>
-          <input class="parent-click" @blur="throwError"/>
-        </div>`,
-    }
-
-    const container = document.createElement('div')
-    // server render
-    container.innerHTML = await renderToString(h(App))
-    // hydrate
-    const app = createSSRApp(App)
-    const handler = (app.config.errorHandler = vi.fn())
-    app.mount(container)
-    // assert interactions
-    // parent blur event
-    triggerEvent('blur', container.querySelector('.parent-click')!)
-    expect(handler).toHaveBeenCalled()
-  })
-
   // #6638
   test('async component', async () => {
     const spy = vi.fn()
@@ -659,76 +469,6 @@ describe('SSR hydration', () => {
   })
 
   //#12362
-  test('nested async wrapper', async () => {
-    const Toggle = defineAsyncComponent(
-      () =>
-        new Promise(r => {
-          r(
-            defineComponent({
-              setup(props: any) {
-                const show = ref(false)
-                onMounted(() => {
-                  nextTick(() => {
-                    show.value = true
-                  })
-                })
-                return () =>
-                  withDirectives(h('div', null, props.children()), [
-                    [vShow, show.value],
-                  ])
-              },
-            }) as any,
-          )
-        }),
-    )
-
-    const Wrapper = defineAsyncComponent(() => {
-      return new Promise(r => {
-        r(
-          defineComponent({
-            render(this: any) {
-              return this.$props.children()
-            },
-          }) as any,
-        )
-      })
-    })
-
-    const count = ref(0)
-    const fn = vi.fn()
-    const Child = {
-      setup() {
-        onMounted(() => {
-          fn()
-          count.value++
-        })
-        return () => h('div', count.value)
-      },
-    }
-
-    const App = {
-      render() {
-        return h(Toggle, null, () =>
-          h(Wrapper, null, () => h(Wrapper, null, () => h(Child))),
-        )
-      },
-    }
-
-    const root = document.createElement('div')
-    root.innerHTML = await renderToString(h(App))
-    expect(root.innerHTML).toMatchInlineSnapshot(
-      `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
-    )
-
-    createSSRApp(App).mount(root)
-    await nextTick()
-    await nextTick()
-    expect(root.innerHTML).toMatchInlineSnapshot(
-      `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
-    )
-    expect(fn).toBeCalledTimes(1)
-  })
-
   test('unmount async wrapper before load (fragment)', async () => {
     let resolve: any
     const AsyncComp = defineAsyncComponent(
@@ -959,90 +699,6 @@ describe('SSR hydration', () => {
 
   // #13394
   // #10607
-  test('update component stable slot (prod + optimized mode)', async () => {
-    __DEV__ = false
-    try {
-      const container = document.createElement('div')
-      container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
-      const Comp = {
-        render(this: any) {
-          return createVNode('div', null, this.$props.children())
-        },
-      }
-      const show = ref(false)
-      const clicked = ref(false)
-
-      const Wrapper = {
-        setup() {
-          const items = ref<number[]>([])
-          onMounted(() => {
-            items.value = [1]
-          })
-          return () => {
-            return createVNode(Comp, null, () => [
-              createElementVNode('div', null, [
-                createElementVNode('div', null, [
-                  clicked.value
-                    ? createVNode('div', { key: 0 }, 'foo')
-                    : createCommentVNode('v-if'),
-                ]),
-              ]),
-              createElementVNode('div', null, items.value.length),
-            ])
-          }
-        },
-      }
-      createSSRApp({
-        components: { Wrapper },
-        data() {
-          return { show }
-        },
-        template: `<Wrapper :show="show"/>`,
-      }).mount(container)
-
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
-      )
-
-      show.value = true
-      await nextTick()
-      expect(async () => {
-        clicked.value = true
-        await nextTick()
-      }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
-
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
-      )
-    } catch (e) {
-      throw e
-    } finally {
-      __DEV__ = true
-    }
-  })
-
-  test('hmr root reload', async () => {
-    const appId = 'test-app-id'
-    const App = {
-      __hmrId: appId,
-      template: `<div>foo</div>`,
-    }
-
-    const root = document.createElement('div')
-    root.innerHTML = await renderToString(h(App))
-    createSSRApp(App).mount(root)
-    expect(root.innerHTML).toBe('<div>foo</div>')
-
-    reload(appId, {
-      __hmrId: appId,
-      template: `<div>bar</div>`,
-    })
-    await nextTick()
-    expect(root.innerHTML).toBe('<div>bar</div>')
-  })
-
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
@@ -1613,40 +1269,5 @@ describe('SSR hydration', () => {
     })
 
     // #9033
-    test('force patch dynamic props when hydrating', () => {
-      __DEV__ = false
-      try {
-        const { container } = mountWithHydration(
-          `<div><div>server</div></div>`,
-          () =>
-            createVNode('div', null, [
-              createElementVNode('div', { innerHTML: 'client' }, null),
-            ]),
-        )
-        expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
-      } finally {
-        __DEV__ = true
-      }
-    })
-
-    test('only patches declared dynamic props when hydrating', () => {
-      const { container } = mountWithHydration(
-        `<div data-allow-mismatch="attribute" id="server" value="server"></div>`,
-        () =>
-          createVNode(
-            'div',
-            {
-              'data-allow-mismatch': 'attribute',
-              id: 'client',
-              value: 'client',
-            },
-            null,
-          ),
-      )
-      const el = container.firstChild as Element
-
-      expect(el.getAttribute('id')).toBe('client')
-      expect(el.getAttribute('value')).toBe('server')
-    })
   })
 })

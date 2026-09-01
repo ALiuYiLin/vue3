@@ -136,7 +136,7 @@ describe('resolveAssets', () => {
 
       const Child = {
         render(this: any) {
-          return this.$slots.default()
+          return (this.$props.children as () => any)()
         },
       }
 

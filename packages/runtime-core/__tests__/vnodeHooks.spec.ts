@@ -58,7 +58,10 @@ describe('renderer: vnode hooks', () => {
       onVnodeUnmounted: vi.fn<(vnode: VNode) => void>(),
     }
 
-    assertHooks(hooks, h('div', hooks, 'foo'), h('div', hooks, 'bar'))
+    // note: props objects are shared with the vnode in this fork (children
+    // live in props.children), so the second vnode gets a shallow copy to
+    // avoid mutating the first vnode's props
+    assertHooks(hooks, h('div', hooks, 'foo'), h('div', { ...hooks }, 'bar'))
   })
 
   test('should work on component', () => {

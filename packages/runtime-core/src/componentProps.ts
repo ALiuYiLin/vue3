@@ -217,6 +217,11 @@ export function initProps(
     if (!instance.type.props) {
       // functional w/ optional props, props === attrs
       instance.props = attrs
+      // children is carried on the props object in this fork; make it
+      // visible through attrs as well since it doubles as the props object
+      if (rawProps && rawProps.children !== undefined) {
+        attrs.children = rawProps.children
+      }
     } else {
       // functional w/ declared props
       instance.props = props

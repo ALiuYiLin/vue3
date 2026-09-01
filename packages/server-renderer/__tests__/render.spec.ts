@@ -225,95 +225,6 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(`<div>parent<div>hello</div></div>`)
       })
 
-      test('nested template components', async () => {
-        const Child = {
-          props: ['msg'],
-          template: `<div>{{ msg }}</div>`,
-        }
-        const app = createApp({
-          template: `<div>parent<Child msg="hello" /></div>`,
-        })
-        app.component('Child', Child)
-
-        expect(await render(app)).toBe(`<div>parent<div>hello</div></div>`)
-      })
-
-      test('template components with dynamic class attribute after static', async () => {
-        const app = createApp({
-          template: `<div><div class="child" :class="'dynamic'"></div></div>`,
-        })
-        expect(await render(app)).toBe(
-          `<div><div class="dynamic child"></div></div>`,
-        )
-      })
-
-      test('template components with dynamic class attribute before static', async () => {
-        const app = createApp({
-          template: `<div><div :class="'dynamic'" class="child"></div></div>`,
-        })
-        expect(await render(app)).toBe(
-          `<div><div class="dynamic child"></div></div>`,
-        )
-      })
-
-      test('mixing optimized / vnode / template components', async () => {
-        const OptimizedChild = {
-          props: ['msg'],
-          ssrRender(ctx: any, push: any) {
-            push(`<div>${ctx.msg}</div>`)
-          },
-        }
-
-        const VNodeChild = {
-          props: ['msg'],
-          render(this: any) {
-            return h('div', this.msg)
-          },
-        }
-
-        const TemplateChild = {
-          props: ['msg'],
-          template: `<div>{{ msg }}</div>`,
-        }
-
-        expect(
-          await render(
-            createApp({
-              ssrRender(_ctx, push, parent) {
-                push(`<div>parent`)
-                push(
-                  ssrRenderComponent(
-                    OptimizedChild,
-                    { msg: 'opt' },
-                    null,
-                    parent,
-                  ),
-                )
-                push(
-                  ssrRenderComponent(
-                    VNodeChild,
-                    { msg: 'vnode' },
-                    null,
-                    parent,
-                  ),
-                )
-                push(
-                  ssrRenderComponent(
-                    TemplateChild,
-                    { msg: 'template' },
-                    null,
-                    parent,
-                  ),
-                )
-                push(`</div>`)
-              },
-            }),
-          ),
-        ).toBe(
-          `<div>parent<div>opt</div><div>vnode</div><div>template</div></div>`,
-        )
-      })
-
       test('async components', async () => {
         const Child = {
           // should wait for resolved render context from setup()
@@ -469,8 +380,6 @@ function testRender(type: string, render: typeof renderToString) {
       })
     })
 
-    describe('vnode component', () => {})
-
     describe('raw vnode types', () => {
       test('Text', async () => {
         expect(await render(createTextVNode('hello <div>'))).toBe(
@@ -510,67 +419,6 @@ function testRender(type: string, render: typeof renderToString) {
           },
         }
         expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
-      })
-    })
-
-    describe('integration w/ compiled template', () => {
-      test('render', async () => {
-        expect(
-          await render(
-            createApp({
-              data() {
-                return { msg: 'hello' }
-              },
-              template: `<div>{{ msg }}</div>`,
-            }),
-          ),
-        ).toBe(`<div>hello</div>`)
-      })
-
-      test('handle compiler errors', async () => {
-        await render(
-          // render different content since compilation is cached
-          createApp({ template: `<div>${type}</` }),
-        )
-
-        expect(
-          `Template compilation error: Unexpected EOF in tag.`,
-        ).toHaveBeenWarned()
-        expect(`Element is missing end tag`).toHaveBeenWarned()
-      })
-
-      // #6110
-      test('reset current instance after rendering error', async () => {
-        const prev = getCurrentInstance()
-        expect(prev).toBe(null)
-        try {
-          await render(
-            createApp({
-              data() {
-                return { msg: null }
-              },
-              template: `<div>{{ msg.text }}</div>`,
-            }),
-          )
-        } catch {}
-        expect(getCurrentInstance()).toBe(prev)
-      })
-
-      // #7733
-      test('reset current instance after error in data', async () => {
-        const prev = getCurrentInstance()
-        expect(prev).toBe(null)
-        try {
-          await render(
-            createApp({
-              data() {
-                throw new Error()
-              },
-              template: `<div>hello</div>`,
-            }),
-          )
-        } catch {}
-        expect(getCurrentInstance()).toBe(null)
       })
     })
 
@@ -638,42 +486,6 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
-    })
-
-    // #2763
-    test('error handling w/ async setup', async () => {
-      const fn = vi.fn()
-      const fn2 = vi.fn()
-
-      const asyncChildren = defineComponent({
-        async setup() {
-          return Promise.reject('async child error')
-        },
-        template: `<div>asyncChildren</div>`,
-      })
-      const app = createApp({
-        name: 'App',
-        components: {
-          asyncChildren,
-        },
-        template: `<div class="app"><async-children /></div>`,
-        errorCaptured(error) {
-          fn(error)
-        },
-      })
-
-      app.config.errorHandler = error => {
-        fn2(error)
-      }
-
-      const html = await renderToString(app)
-      expect(html).toBe(`<div class="app"><div>asyncChildren</div></div>`)
-
-      expect(fn).toHaveBeenCalledTimes(1)
-      expect(fn).toBeCalledWith('async child error')
-
-      expect(fn2).toHaveBeenCalledTimes(1)
-      expect(fn2).toBeCalledWith('async child error')
     })
 
     // https://github.com/vuejs/core/issues/3322

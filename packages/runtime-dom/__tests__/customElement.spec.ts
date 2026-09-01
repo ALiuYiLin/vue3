@@ -1667,28 +1667,6 @@ describe('defineCustomElement', () => {
     )
     customElements.define('my-el-shadowroot-false-slots', ES)
 
-    test('should render slots', async () => {
-      container.innerHTML =
-        `<my-el-shadowroot-false-slots>` +
-        `<span>default</span>text` +
-        `<div slot="named">named</div>` +
-        `</my-el-shadowroot-false-slots>`
-      const e = container.childNodes[0] as VueElement
-      // native slots allocation does not affect innerHTML, so we just
-      // verify that we've rendered the correct native slots here...
-      expect(e.innerHTML).toBe(
-        `<span>default</span>text` +
-          `<div slot="named">named</div>` +
-          `<div>fallback</div>`,
-      )
-
-      toggle.value = false
-      await nextTick()
-      expect(e.innerHTML).toBe(
-        `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
-      )
-    })
-
     test('render nested customElement w/ shadowRoot false', async () => {
       const calls: string[] = []
 

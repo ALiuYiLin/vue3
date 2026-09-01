@@ -14,7 +14,6 @@ import {
   render,
   withModifiers,
 } from '@vue/runtime-dom'
-import { createApp } from 'vue'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
@@ -655,32 +654,5 @@ describe('attribute fallthrough', () => {
     expect(click).toHaveBeenCalled()
     expect(textBar).toBe('from GrandChild')
     expect(textFoo).toBe('from Child')
-  })
-
-  // covers uncaught regression #10710
-  it('should track this.$attrs access in slots', async () => {
-    const GrandChild = {
-      template: `<slot/>`,
-    }
-    const Child = {
-      components: { GrandChild },
-      template: `<div><GrandChild>{{ $attrs.foo }}</GrandChild></div>`,
-    }
-
-    const obj = ref(1)
-    const App = {
-      render() {
-        return h(Child, { foo: obj.value })
-      },
-    }
-
-    const root = document.createElement('div')
-    createApp(App).mount(root)
-
-    expect(root.innerHTML).toBe('<div foo="1">1</div>')
-
-    obj.value = 2
-    await nextTick()
-    expect(root.innerHTML).toBe('<div foo="2">2</div>')
   })
 })

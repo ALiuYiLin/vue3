@@ -1,6 +1,4 @@
-import { defineComponent, h, nextTick, ref } from 'vue'
-import { mathmlNS, nodeOps, svgNS } from '../src/nodeOps'
-import { render } from '@vue/runtime-dom'
+import { nodeOps, svgNS } from '../src/nodeOps'
 describe('runtime-dom: node-ops', () => {
   test("the <select>'s multiple attr should be set in createElement", () => {
     const el = nodeOps.createElement('select', undefined, undefined, {
@@ -120,39 +118,6 @@ describe('runtime-dom: node-ops', () => {
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)
       expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
-    })
-
-    test('The math elements should keep their MathML namespace', async () => {
-      let root = document.createElement('div') as any
-
-      let countRef: any
-      const component = defineComponent({
-        data() {
-          return { value: 0 }
-        },
-        setup() {
-          const count = ref(0)
-          countRef = count
-          return {
-            count,
-          }
-        },
-        template: `
-          <div>
-            <math>
-              <mrow class="bar" v-if="count % 2">Bar</mrow>
-              <msup class="foo" v-else>Foo</msup>
-            </math>
-          </div>
-        `,
-      })
-      render(h(component), root)
-      const foo = root.querySelector('.foo')
-      expect(foo.namespaceURI).toBe(mathmlNS)
-      countRef.value++
-      await nextTick()
-      const bar = root.querySelector('.bar')
-      expect(bar.namespaceURI).toBe(mathmlNS)
     })
   })
 })

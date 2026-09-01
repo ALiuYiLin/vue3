@@ -15,6 +15,7 @@ import {
 import { ErrorCodes, handleError } from './errorHandling'
 import {
   ShapeFlags,
+  extend,
   isModelListener,
   isObject,
   isOn,
@@ -135,6 +136,12 @@ export function renderComponentRoot(
   let root = result
 
   if (fallthroughAttrs && inheritAttrs !== false) {
+    // children is always delivered via props and must never leak into the
+    // root element's attrs (it would override the explicitly passed children)
+    if ('children' in fallthroughAttrs) {
+      fallthroughAttrs = extend({}, fallthroughAttrs)
+      delete fallthroughAttrs.children
+    }
     const keys = Object.keys(fallthroughAttrs)
     const { shapeFlag } = root
     if (keys.length) {

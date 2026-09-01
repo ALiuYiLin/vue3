@@ -9,7 +9,7 @@ import {
   transformVNodeArgs,
 } from '../src/vnode'
 import type { Data } from '../src/component'
-import { PatchFlags, ShapeFlags } from '@vue/shared'
+import { ShapeFlags } from '@vue/shared'
 import { h, isReactive, reactive, ref } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
@@ -64,8 +64,7 @@ describe('vnode', () => {
     const vnode2 = createVNode(vnode1)
     expect(vnode2).toMatchObject({
       type: 'div',
-      patchFlag: PatchFlags.BAIL,
-      children: 'text',
+      props: { children: 'text' },
       shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
     })
   })
@@ -209,8 +208,15 @@ describe('vnode', () => {
     expect(normalized).toEqual(mounted)
 
     // primitive types
-    expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
-    expect(normalizeVNode(1)).toMatchObject({ type: Text, children: `1` })
+    // in this fork children live in props.children
+    expect(normalizeVNode('foo')).toMatchObject({
+      type: Text,
+      props: { children: `foo` },
+    })
+    expect(normalizeVNode(1)).toMatchObject({
+      type: Text,
+      props: { children: `1` },
+    })
   })
 
   test('type shapeFlag inference', () => {
@@ -506,8 +512,7 @@ describe('vnode', () => {
       const vnode = createVNode('div', { id: 'foo' }, 'hello')
       expect(vnode).toMatchObject({
         type: 'div',
-        props: { id: 'foo' },
-        children: 'hello',
+        props: { id: 'foo', children: 'hello' },
         shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       })
     })
@@ -517,8 +522,7 @@ describe('vnode', () => {
       const vnode = createVNode('p')
       expect(vnode).toMatchObject({
         type: 'div',
-        props: { id: 'foo' },
-        children: 'hello',
+        props: { id: 'foo', children: 'hello' },
         shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       })
     })

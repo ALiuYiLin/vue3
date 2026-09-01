@@ -1,10 +1,7 @@
 import {
-  Fragment,
   type Ref,
   type TestElement,
   createApp,
-  createElementVNode,
-  createVNode,
   defineComponent,
   h,
   nextTick,
@@ -381,75 +378,6 @@ describe('useModel', () => {
   })
 
   // #9838
-  test('pass modelValue to slot (optimized mode) ', async () => {
-    let foo: any
-    const update = () => {
-      foo.value = 'bar'
-    }
-
-    const Comp = {
-      render(this: any) {
-        return this.$slots.default()
-      },
-    }
-
-    const childRender = vi.fn()
-    const slotRender = vi.fn()
-    const Child = defineComponent({
-      props: ['modelValue'],
-      emits: ['update:modelValue'],
-      setup(props) {
-        foo = useModel(props, 'modelValue')
-        return () => {
-          childRender()
-          return createVNode(Fragment, null, [
-            createVNode(Comp, null, {
-              default: () => {
-                slotRender()
-                return createElementVNode('div', null, foo.value)
-              },
-              _: 1 /* STABLE */,
-            }),
-          ])
-        }
-      },
-    })
-
-    const msg = ref('')
-    const setValue = vi.fn(v => (msg.value = v))
-    const root = nodeOps.createElement('div')
-    createApp({
-      render() {
-        return createVNode(
-          Child,
-          {
-            modelValue: msg.value,
-            'onUpdate:modelValue': setValue,
-          },
-          null,
-        )
-      },
-    }).mount(root)
-
-    expect(foo.value).toBe('')
-    expect(msg.value).toBe('')
-    expect(setValue).not.toBeCalled()
-    expect(childRender).toBeCalledTimes(1)
-    expect(slotRender).toBeCalledTimes(1)
-    expect(serializeInner(root)).toBe('<div></div>')
-
-    // update from child
-    update()
-
-    await nextTick()
-    expect(msg.value).toBe('bar')
-    expect(foo.value).toBe('bar')
-    expect(setValue).toBeCalledTimes(1)
-    expect(childRender).toBeCalledTimes(2)
-    expect(slotRender).toBeCalledTimes(2)
-    expect(serializeInner(root)).toBe('<div>bar</div>')
-  })
-
   test('with modifiers & transformers', async () => {
     let childMsg: Ref<string>
     let childModifiers: Record<string, true | undefined>

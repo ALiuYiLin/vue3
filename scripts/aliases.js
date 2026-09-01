@@ -18,7 +18,7 @@ const entries = {
   'vue/server-renderer': resolveEntryForPkg('server-renderer'),
 }
 
-const nonSrcPackages = ['runtime-test']
+const nonSrcPackages = ['dts-test']
 
 for (const dir of dirs) {
   const key = `@vue/${dir}`

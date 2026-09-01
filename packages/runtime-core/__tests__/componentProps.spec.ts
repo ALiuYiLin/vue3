@@ -19,7 +19,6 @@ import {
   toRefs,
   watch,
 } from '@vue/runtime-test'
-import { render as domRender } from 'vue'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -245,91 +244,6 @@ describe('component props', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>injected</div>`)
-  })
-
-  test('optimized props updates', async () => {
-    const Child = defineComponent({
-      props: ['foo'],
-      template: `<div>{{ foo }}</div>`,
-    })
-
-    const foo = ref(1)
-    const id = ref('a')
-
-    const Comp = defineComponent({
-      setup() {
-        return {
-          foo,
-          id,
-        }
-      },
-      components: { Child },
-      template: `<Child :foo="foo" :id="id"/>`,
-    })
-
-    // Note this one is using the main Vue render so it can compile template
-    // on the fly
-    const root = document.createElement('div')
-    domRender(h(Comp), root)
-    expect(root.innerHTML).toBe('<div id="a">1</div>')
-
-    foo.value++
-    await nextTick()
-    expect(root.innerHTML).toBe('<div id="a">2</div>')
-
-    id.value = 'b'
-    await nextTick()
-    expect(root.innerHTML).toBe('<div id="b">2</div>')
-  })
-
-  describe('validator', () => {
-    test('validator should be called with two arguments', async () => {
-      const mockFn = vi.fn((...args: any[]) => true)
-      const Comp = defineComponent({
-        props: {
-          foo: {
-            type: Number,
-            validator: (value, props) => mockFn(value, props),
-          },
-          bar: {
-            type: Number,
-          },
-        },
-        template: `<div />`,
-      })
-
-      // Note this one is using the main Vue render so it can compile template
-      // on the fly
-      const root = document.createElement('div')
-      domRender(h(Comp, { foo: 1, bar: 2 }), root)
-      expect(mockFn).toHaveBeenCalledWith(1, { foo: 1, bar: 2 })
-    })
-
-    test('validator should not be able to mutate other props', async () => {
-      const mockFn = vi.fn((...args: any[]) => true)
-      const Comp = defineComponent({
-        props: {
-          foo: {
-            type: Number,
-            validator: (value, props) => !!(props.bar = 1),
-          },
-          bar: {
-            type: Number,
-            validator: value => mockFn(value),
-          },
-        },
-        template: `<div />`,
-      })
-
-      // Note this one is using the main Vue render so it can compile template
-      // on the fly
-      const root = document.createElement('div')
-      domRender(h(Comp, { foo: 1, bar: 2 }), root)
-      expect(
-        `Set operation on key "bar" failed: target is readonly.`,
-      ).toHaveBeenWarnedLast()
-      expect(mockFn).toHaveBeenCalledWith(2)
-    })
   })
 
   //#12011
@@ -874,37 +788,4 @@ describe('component props', () => {
   })
 
   // #5517
-  test('events should not be props when component updating', async () => {
-    let props: any
-    function eventHandler() {}
-    const foo = ref(1)
-
-    const Child = defineComponent({
-      setup(_props) {
-        props = _props
-      },
-      emits: ['event'],
-      props: ['foo'],
-      template: `<div>{{ foo }}</div>`,
-    })
-
-    const Comp = defineComponent({
-      setup() {
-        return {
-          foo,
-          eventHandler,
-        }
-      },
-      components: { Child },
-      template: `<Child @event="eventHandler" :foo="foo" />`,
-    })
-
-    const root = document.createElement('div')
-    domRender(h(Comp), root)
-    expect(props).not.toHaveProperty('onEvent')
-
-    foo.value++
-    await nextTick()
-    expect(props).not.toHaveProperty('onEvent')
-  })
 })

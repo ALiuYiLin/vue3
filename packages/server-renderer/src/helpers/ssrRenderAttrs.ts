@@ -20,8 +20,10 @@ import {
 } from '@vue/shared'
 
 // leading comma for empty string ""
+// `children` is carried in props in this fork (JSX-style children) and must
+// not be rendered as an attribute.
 const shouldIgnoreProp = /*@__PURE__*/ makeMap(
-  `,key,ref,innerHTML,textContent,ref_key,ref_for`,
+  `,key,ref,children,innerHTML,textContent,ref_key,ref_for`,
 )
 
 export function ssrRenderAttrs(
