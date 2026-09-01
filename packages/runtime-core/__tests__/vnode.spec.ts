@@ -30,8 +30,7 @@ describe('vnode', () => {
   test('create with tag, props and children', () => {
     const vnode = createVNode('p', {}, ['foo'])
     expect(vnode.type).toBe('p')
-    expect(vnode.props).toMatchObject({})
-    expect(vnode.children).toMatchObject(['foo'])
+    expect(vnode.props).toMatchObject({ children: ['foo'] })
   })
 
   test('create with 0 as props', () => {
@@ -54,8 +53,8 @@ describe('vnode', () => {
       props: {
         id: 'foo',
         class: 'bar',
+        children: 'baz',
       },
-      children: 'baz',
       shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
     })
   })
@@ -130,38 +129,34 @@ describe('vnode', () => {
   describe('children normalization', () => {
     test('null', () => {
       const vnode = createVNode('p', null, null)
-      expect(vnode.children).toBe(null)
+      expect(vnode.props).toBe(null)
       expect(vnode.shapeFlag).toBe(ShapeFlags.ELEMENT)
     })
 
     test('array', () => {
       const vnode = createVNode('p', null, ['foo'])
-      expect(vnode.children).toMatchObject(['foo'])
+      expect(vnode.props!.children).toMatchObject(['foo'])
       expect(vnode.shapeFlag).toBe(
         ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN,
       )
     })
 
-    test('object', () => {
+    test('object on component is ignored', () => {
       const vnode = createVNode({}, null, { foo: 'foo' })
-      expect(vnode.children).toMatchObject({ foo: 'foo' })
-      expect(vnode.shapeFlag).toBe(
-        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN,
-      )
+      expect(vnode.props).toBe(null)
+      expect(vnode.shapeFlag).toBe(ShapeFlags.STATEFUL_COMPONENT)
     })
 
     test('function on component', () => {
       const slot = vi.fn()
       const vnode = createVNode({}, null, slot)
-      expect(vnode.children).toMatchObject({ default: slot })
-      expect(vnode.shapeFlag).toBe(
-        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN,
-      )
+      expect(vnode.props!.children).toBe(slot)
+      expect(vnode.shapeFlag).toBe(ShapeFlags.STATEFUL_COMPONENT)
     })
 
     test('function on element', () => {
       const vnode = createVNode('p', null, () => 'foo')
-      expect(vnode.children).toBe('foo')
+      expect(vnode.props!.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
         ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       )
@@ -169,19 +164,19 @@ describe('vnode', () => {
 
     test('string', () => {
       const vnode = createVNode('p', null, 'foo')
-      expect(vnode.children).toBe('foo')
+      expect(vnode.props!.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
         ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
       )
     })
 
-    test('element with slots', () => {
+    test('element with legacy slot object', () => {
       const children = [createVNode('span', null, 'hello')]
       const vnode = createVNode('div', null, {
         default: () => children,
       })
 
-      expect(vnode.children).toBe(children)
+      expect(vnode.props!.children).toBe(children)
       expect(vnode.shapeFlag).toBe(
         ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN,
       )

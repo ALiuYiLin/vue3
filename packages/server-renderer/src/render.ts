@@ -221,10 +221,11 @@ export function renderVNode(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ): void {
-  const { type, shapeFlag, children, dirs, props } = vnode
+  const { type, shapeFlag, dirs, props } = vnode
   if (dirs) {
     vnode.props = applySSRDirectives(vnode, props, dirs)
   }
+  const children = vnode.props && vnode.props.children
 
   switch (type) {
     case Text:
@@ -287,7 +288,8 @@ function renderElementVNode(
   slotScopeId?: string,
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId } = vnode
+  let { props, shapeFlag, scopeId } = vnode
+  const children = props && props.children
   let openTag = `<${tag}`
 
   if (props) {

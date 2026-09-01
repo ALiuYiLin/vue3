@@ -14,12 +14,18 @@ import {
   provide,
   ref,
   render,
-  renderSlot,
   useHost,
   useShadowRoot,
 } from '../src'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
+
+// slots are removed in this fork: render vnode children when present, otherwise
+// emit a native <slot> outlet so light DOM content can be projected
+const slotOutlet = (ctx: any, props?: any, fallback?: () => any[]) => {
+  const children = ctx.$props.children
+  return children ? children() : h('slot', props, fallback && fallback())
+}
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -865,14 +871,12 @@ describe('defineCustomElement', () => {
 
   describe('slots', () => {
     const E = defineCustomElement({
-      render() {
+      render(this: any) {
         return [
           h('div', null, [
-            renderSlot(this.$slots, 'default', undefined, () => [
-              h('div', 'fallback'),
-            ]),
+            slotOutlet(this, undefined, () => [h('div', 'fallback')]),
           ]),
-          h('div', null, renderSlot(this.$slots, 'named')),
+          h('div', null, slotOutlet(this, { name: 'named' })),
         ]
       },
     })
@@ -891,14 +895,8 @@ describe('defineCustomElement', () => {
     test('render slot props', async () => {
       const foo = ref('foo')
       const E = defineCustomElement({
-        render() {
-          return [
-            h(
-              'div',
-              null,
-              renderSlot(this.$slots, 'default', { class: foo.value }),
-            ),
-          ]
+        render(this: any) {
+          return [h('div', null, slotOutlet(this, { class: foo.value }))]
         },
       })
       customElements.define('my-el-slot-props', E)
@@ -953,8 +951,8 @@ describe('defineCustomElement', () => {
         provide: {
           foo,
         },
-        render() {
-          return renderSlot(this.$slots, 'default')
+        render(this: any) {
+          return slotOutlet(this)
         },
       })
       customElements.define('my-provider-2', Provider)
@@ -1055,8 +1053,8 @@ describe('defineCustomElement', () => {
               inject<string>('inner'),
             )
           },
-          render() {
-            return h('div', [renderSlot(this.$slots, 'default')])
+          render(this: any) {
+            return h('div', [slotOutlet(this)])
           },
         },
         {
@@ -1079,8 +1077,8 @@ describe('defineCustomElement', () => {
               inject<string>('inner'),
             )
           },
-          render() {
-            return h('div', [renderSlot(this.$slots, 'default')])
+          render(this: any) {
+            return h('div', [slotOutlet(this)])
           },
         },
         {
@@ -1603,11 +1601,9 @@ describe('defineCustomElement', () => {
             render(this: any) {
               return [
                 h('div', null, [
-                  renderSlot(this.$slots, 'default', undefined, () => [
-                    h('div', 'fallback'),
-                  ]),
+                  slotOutlet(this, undefined, () => [h('div', 'fallback')]),
                 ]),
-                h('div', null, renderSlot(this.$slots, 'named')),
+                h('div', null, slotOutlet(this, { name: 'named' })),
               ]
             },
           })
@@ -1659,13 +1655,11 @@ describe('defineCustomElement', () => {
     const toggle = ref(true)
     const ES = defineCustomElement(
       {
-        render() {
+        render(this: any) {
           return [
-            renderSlot(this.$slots, 'default'),
-            toggle.value ? renderSlot(this.$slots, 'named') : null,
-            renderSlot(this.$slots, 'omitted', {}, () => [
-              h('div', 'fallback'),
-            ]),
+            slotOutlet(this),
+            toggle.value ? slotOutlet(this, { name: 'named' }) : null,
+            slotOutlet(this, { name: 'omitted' }, () => [h('div', 'fallback')]),
           ]
         },
       },
@@ -1706,8 +1700,8 @@ describe('defineCustomElement', () => {
               calls.push('child mounted')
             })
           },
-          render() {
-            return renderSlot(this.$slots, 'default')
+          render(this: any) {
+            return slotOutlet(this)
           },
         },
         { shadowRoot: false },
@@ -1722,8 +1716,8 @@ describe('defineCustomElement', () => {
               calls.push('parent mounted')
             })
           },
-          render() {
-            return renderSlot(this.$slots, 'default')
+          render(this: any) {
+            return slotOutlet(this)
           },
         },
         { shadowRoot: false },
@@ -1732,13 +1726,9 @@ describe('defineCustomElement', () => {
 
       const App = {
         render() {
-          return h('my-parent', null, {
-            default: () => [
-              h('my-child', null, {
-                default: () => [h('span', null, 'default')],
-              }),
-            ],
-          })
+          return h('my-parent', null, () => [
+            h('my-child', null, () => [h('span', null, 'default')]),
+          ])
         },
       }
       const app = createApp(App)
@@ -1763,7 +1753,7 @@ describe('defineCustomElement', () => {
         defineCustomElement(
           {
             render(ctx: any) {
-              return h('div', null, [renderSlot(ctx.$slots, 'default')])
+              return h('div', null, [slotOutlet(ctx)])
             },
           },
           { shadowRoot: false },
@@ -1784,7 +1774,7 @@ describe('defineCustomElement', () => {
             },
             render(ctx: any, _: any, $props: any) {
               return $props.isShown
-                ? h('div', { key: 0 }, [renderSlot(ctx.$slots, 'default')])
+                ? h('div', { key: 0 }, [slotOutlet(ctx)])
                 : null
             },
           },
@@ -1797,7 +1787,7 @@ describe('defineCustomElement', () => {
         },
         render(ctx: any, _: any, $props: any) {
           return h('my-el-parent-shadow-false', { isShown: $props.isShown }, [
-            renderSlot(ctx.$slots, 'default'),
+            slotOutlet(ctx),
           ])
         },
       }
@@ -1805,9 +1795,9 @@ describe('defineCustomElement', () => {
       const isShown = ref(true)
       const App = {
         render() {
-          return h(ParentWrapper, { isShown: isShown.value } as any, {
-            default: () => [h(ChildWrapper)],
-          })
+          return h(ParentWrapper, { isShown: isShown.value } as any, () => [
+            h(ChildWrapper),
+          ])
         },
       }
       const container = document.createElement('div')
@@ -1974,7 +1964,7 @@ describe('defineCustomElement', () => {
             provide('foo', 'foo')
           },
           render(this: any) {
-            return h('div', null, [renderSlot(this.$slots, 'default')])
+            return h('div', null, [slotOutlet(this)])
           },
         })
       }),
@@ -2008,7 +1998,7 @@ describe('defineCustomElement', () => {
             provide('foo', 'foo')
           },
           render(this: any) {
-            return h('div', null, [renderSlot(this.$slots, 'default')])
+            return h('div', null, [slotOutlet(this)])
           },
         })
       }),
@@ -2019,7 +2009,7 @@ describe('defineCustomElement', () => {
         provide('bar', 'bar')
       },
       render(this: any) {
-        return h('div', null, [renderSlot(this.$slots, 'default')])
+        return h('div', null, [slotOutlet(this)])
       },
     })
 

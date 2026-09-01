@@ -29,7 +29,6 @@ import {
 } from '@vue/shared'
 import type { vShow } from './directives/vShow'
 import type { VOnDirective } from './directives/vOn'
-import type { VModelDirective } from './directives/vModel'
 import type { ClassValue, StyleValue } from './jsx'
 
 /**
@@ -54,7 +53,6 @@ declare module '@vue/runtime-core' {
   interface GlobalDirectives {
     vShow: typeof vShow
     vOn: VOnDirective
-    vBind: VModelDirective
     vIf: Directive<any, boolean>
     vOnce: Directive
     vSlot: Directive
@@ -264,17 +262,9 @@ export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
 
 // **Internal** DOM-only runtime directive helpers
-export {
-  vModelText,
-  vModelCheckbox,
-  vModelRadio,
-  vModelSelect,
-  vModelDynamic,
-} from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'
 
-import { initVModelForSSR } from './directives/vModel'
 import { initVShowForSSR } from './directives/vShow'
 
 let ssrDirectiveInitialized = false
@@ -286,7 +276,6 @@ export const initDirectivesForSSR: () => void = __SSR__
   ? () => {
       if (!ssrDirectiveInitialized) {
         ssrDirectiveInitialized = true
-        initVModelForSSR()
         initVShowForSSR()
       }
     }

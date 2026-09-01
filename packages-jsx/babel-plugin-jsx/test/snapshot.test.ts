@@ -29,61 +29,12 @@ function transpile(source: string, options: VueJSXPluginOptions = {}) {
 
 ;[
   {
-    name: 'input[type="checkbox"]',
-    from: '<input type="checkbox" v-model={test} />',
-  },
-  {
-    name: 'input[type="radio"]',
-    from: `
-      <>
-        <input type="radio" value="1" v-model={test} name="test" />
-        <input type="radio" value="2" v-model={test} name="test" />
-      </>
-    `,
-  },
-  {
-    name: 'select',
-    from: `
-      <select v-model={test}>
-        <option value="1">a</option>
-        <option value={2}>b</option>
-        <option value={3}>c</option>
-      </select>
-    `,
-  },
-  {
-    name: 'textarea',
-    from: '<textarea v-model={test} />',
-  },
-  {
-    name: 'input[type="text"]',
-    from: '<input v-model={test} />',
-  },
-  {
-    name: 'dynamic type in input',
-    from: '<input type={type} v-model={test} />',
-  },
-  {
     name: 'v-show',
     from: '<div v-show={x}>vShow</div>',
   },
   {
-    name: 'input[type="text"] .lazy modifier',
-    from: `
-      <input v-model={[test, ['lazy']]} />
-    `,
-  },
-  {
     name: 'custom directive',
     from: '<A vCus={x} />',
-  },
-  {
-    name: 'vHtml',
-    from: '<h1 v-html="<div>foo</div>"></h1>',
-  },
-  {
-    name: 'vText',
-    from: '<div v-text={text}></div>',
   },
   {
     name: 'Without props',
@@ -131,8 +82,8 @@ function transpile(source: string, options: VueJSXPluginOptions = {}) {
       import { defineComponent } from 'vue';
       let a = 1;
       const A = defineComponent({
-        setup(_, { slots }) {
-          return () => <span>{slots.default()}</span>;
+        setup(_, { attrs }) {
+          return () => <span>{attrs.foo}</span>;
         },
       });
 
@@ -153,7 +104,6 @@ function transpile(source: string, options: VueJSXPluginOptions = {}) {
         <A v-xxx={[x, 'y', ['a', 'b']]} />
         <A v-xxx={[x, ['a', 'b']]} />
         <A v-xxx={[x, y, ['a', 'b']]} />
-        <A v-xxx={[x, y, ['a', 'b']]} />
       </>
     `,
   },
@@ -165,30 +115,6 @@ function transpile(source: string, options: VueJSXPluginOptions = {}) {
     `,
   },
   {
-    name: 'vModels',
-    from: '<C v-models={[[foo, ["modifier"]], [bar, "bar", ["modifier1", "modifier2"]]]} />',
-  },
-  {
-    name: 'use "model" as the prop name',
-    from: '<C v-model={[foo, "model"]} />',
-  },
-  {
-    name: 'named import specifier `Keep Alive`',
-    from: `
-      import { KeepAlive } from 'vue';
-
-      <KeepAlive>123</KeepAlive>
-    `,
-  },
-  {
-    name: 'namespace specifier `Keep Alive`',
-    from: `
-      import * as Vue from 'vue';
-
-      <Vue.KeepAlive>123</Vue.KeepAlive>
-    `,
-  },
-  {
     name: 'use "@jsx" comment specify pragma',
     from: `
       /* @jsx custom */
@@ -196,36 +122,12 @@ function transpile(source: string, options: VueJSXPluginOptions = {}) {
     `,
   },
   {
-    name: 'v-model target value support variable',
-    from: `
-      const foo = 'foo';
-
-      const a = () => 'a';
-
-      const b = { c: 'c' };
-      <>
-        <A v-model={[xx, foo]} />
-        <B v-model={[xx, ['a']]} />
-        <C v-model={[xx, foo, ['a']]} />
-        <D v-model={[xx, foo === 'foo' ? 'a' : 'b', ['a']]} />
-        <E v-model={[xx, a(), ['a']]} />
-        <F v-model={[xx, b.c, ['a']]} />
-      </>
-    `,
-  },
-  {
-    name: 'using v-slots without children should not be spread',
-    from: '<A v-slots={slots} />',
-  },
-  {
     name: 'TemplateLiteral prop and event co-usage',
     from: '<div value={`${foo}`} onClick={() => foo.value++}></div>',
   },
 ].forEach(({ name, from }) => {
   test(name, async () => {
-    expect(
-      await transpile(from, { optimize: true, enableObjectSlots: true }),
-    ).toMatchSnapshot(name)
+    expect(await transpile(from)).toMatchSnapshot(name)
   })
 })
 
@@ -246,7 +148,7 @@ overridePropsTests.forEach(({ name, from }) => {
   })
 })
 
-const slotsTests: Test[] = [
+const childrenTests: Test[] = [
   {
     name: 'multiple expressions',
     from: '<A>{foo}{bar}</A>',
@@ -258,14 +160,14 @@ const slotsTests: Test[] = [
     `,
   },
   {
-    name: 'single expression, non-literal value: runtime check',
+    name: 'single expression, non-literal value',
     from: `
       const foo = () => 1;
       <A>{foo()}</A>;
     `,
   },
   {
-    name: 'no directive in slot',
+    name: 'no directive in children',
     from: `
       <>
         <A><div />{foo}</A>
@@ -276,7 +178,7 @@ const slotsTests: Test[] = [
     `,
   },
   {
-    name: 'directive in slot',
+    name: 'directive in children',
     from: `
       <>
         <A><div v-xxx />{foo}</A>
@@ -287,7 +189,7 @@ const slotsTests: Test[] = [
     `,
   },
   {
-    name: 'directive in slot, in scope',
+    name: 'directive in children, in scope',
     from: `
       const vXxx = {};
       <>
@@ -300,26 +202,9 @@ const slotsTests: Test[] = [
   },
 ]
 
-slotsTests.forEach(({ name, from }) => {
-  test(`passing object slots via JSX children ${name}`, async () => {
-    expect(
-      await transpile(from, { optimize: true, enableObjectSlots: true }),
-    ).toMatchSnapshot(name)
-  })
-})
-
-const objectSlotsTests = [
-  {
-    name: 'defaultSlot',
-    from: '<Badge>{slots.default()}</Badge>',
-  },
-]
-
-objectSlotsTests.forEach(({ name, from }) => {
-  test(`disable object slot syntax with ${name}`, async () => {
-    expect(
-      await transpile(from, { optimize: true, enableObjectSlots: false }),
-    ).toMatchSnapshot(name)
+childrenTests.forEach(({ name, from }) => {
+  test(`passing children via JSX ${name}`, async () => {
+    expect(await transpile(from)).toMatchSnapshot(name)
   })
 })
 

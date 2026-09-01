@@ -30,7 +30,6 @@ import {
   type VNodeProps,
   createVNode,
   isVNode,
-  normalizeChildren,
 } from '../vnode'
 import {
   DeprecationTypes,
@@ -261,45 +260,12 @@ function convertLegacyDirectives(
 }
 
 function convertLegacySlots(vnode: VNode): VNode {
-  const { props, children } = vnode
+  const { props } = vnode
 
-  let slots: Record<string, any> | undefined
-
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT && isArray(children)) {
-    slots = {}
-    // check "slot" property on vnodes and turn them into v3 function slots
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      const slotName =
-        (isVNode(child) && child.props && child.props.slot) || 'default'
-      const slot = slots[slotName] || (slots[slotName] = [] as any[])
-      if (isVNode(child) && child.type === 'template') {
-        slot.push(child.children)
-      } else {
-        slot.push(child)
-      }
-    }
-    if (slots) {
-      for (const key in slots) {
-        const slotChildren = slots[key]
-        slots[key] = () => slotChildren
-        slots[key]._ns = true /* non-scoped slot */
-      }
-    }
-  }
-
-  const scopedSlots = props && props.scopedSlots
-  if (scopedSlots) {
-    delete props!.scopedSlots
-    if (slots) {
-      extend(slots, scopedSlots)
-    } else {
-      slots = scopedSlots
-    }
-  }
-
-  if (slots) {
-    normalizeChildren(vnode, slots)
+  // v2 scopedSlots are not supported in this fork; plain children are kept
+  // as-is (merged into props.children by normalizeChildren)
+  if (props) {
+    delete props.scopedSlots
   }
 
   return vnode
@@ -328,7 +294,12 @@ export function defineLegacyVNodeProperties(vnode: VNode): void {
       elm: { get: () => vnode.el },
       componentInstance: { get: getInstance },
       child: { get: getInstance },
-      text: { get: () => (isString(vnode.children) ? vnode.children : null) },
+      text: {
+        get: () => {
+          const children = vnode.props && vnode.props.children
+          return isString(children) ? children : null
+        },
+      },
       context: { get: () => context && context.proxy },
       componentOptions: {
         get: () => {
@@ -339,7 +310,7 @@ export function defineLegacyVNodeProperties(vnode: VNode): void {
             return (componentOptions = {
               Ctor: vnode.type,
               propsData: vnode.props,
-              children: vnode.children,
+              children: vnode.props && vnode.props.children,
             })
           }
         },

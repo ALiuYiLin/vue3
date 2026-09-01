@@ -5,9 +5,7 @@ export type { VueJSXPluginOptions }
 
 export const compilerOptions: VueJSXPluginOptions = reactive({
   mergeProps: true,
-  optimize: false,
   transformOn: false,
-  enableObjectSlots: true,
   resolveType: false,
 })
 
@@ -43,21 +41,6 @@ const App = defineComponent({
             <li>
               <input
                 type="checkbox"
-                id="optimize"
-                name="optimize"
-                checked={compilerOptions.optimize}
-                onChange={(e: Event) => {
-                  compilerOptions.optimize = (
-                    e.target as HTMLInputElement
-                  ).checked
-                }}
-              />
-              <label for="optimize">optimize</label>
-            </li>
-
-            <li>
-              <input
-                type="checkbox"
                 id="transformOn"
                 name="transformOn"
                 checked={compilerOptions.transformOn}
@@ -68,21 +51,6 @@ const App = defineComponent({
                 }}
               />
               <label for="transformOn">transformOn</label>
-            </li>
-
-            <li>
-              <input
-                type="checkbox"
-                id="enableObjectSlots"
-                name="enableObjectSlots"
-                checked={compilerOptions.enableObjectSlots}
-                onChange={(e: Event) => {
-                  compilerOptions.enableObjectSlots = (
-                    e.target as HTMLInputElement
-                  ).checked
-                }}
-              />
-              <label for="enableObjectSlots">enableObjectSlots</label>
             </li>
 
             <li>

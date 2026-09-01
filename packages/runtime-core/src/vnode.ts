@@ -1,6 +1,5 @@
 import {
   ShapeFlags,
-  SlotFlags,
   extend,
   isArray,
   isFunction,
@@ -19,7 +18,6 @@ import {
   type Data,
   isClassComponent,
 } from './component'
-import type { RawSlots } from './componentSlots'
 import {
   type ReactiveFlags,
   type Ref,
@@ -110,6 +108,9 @@ export type VNodeProps = {
   ref_for?: boolean
   ref_key?: string
 
+  // children (single source of truth; also accepted as the 3rd createVNode arg)
+  children?: VNodeChild | (() => any)
+
   // vnode hooks
   onVnodeBeforeMount?: VNodeMountHook | VNodeMountHook[]
   onVnodeMounted?: VNodeMountHook | VNodeMountHook[]
@@ -132,11 +133,7 @@ export type VNodeArrayChildren = Array<VNodeArrayChildren | VNodeChildAtom>
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
-export type VNodeNormalizedChildren =
-  | string
-  | VNodeArrayChildren
-  | RawSlots
-  | null
+export type VNodeNormalizedChildren = string | VNodeArrayChildren | null
 
 export interface VNode<
   HostNode = RendererNode,
@@ -170,7 +167,6 @@ export interface VNode<
    * @internal
    */
   slotScopeIds: string[] | null
-  children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
   dirs: DirectiveBinding[] | null
   transition: TransitionHooks<HostElement> | null
@@ -301,7 +297,6 @@ function createBaseVNode(
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
     slotScopeIds: null,
-    children,
     component: null,
     dirs: null,
     transition: null,
@@ -318,9 +313,10 @@ function createBaseVNode(
 
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
-  } else if (children) {
+  } else if (children != null) {
     // compiled element vnode - if children is passed, only possible types are
     // string or Array.
+    ;(props || (vnode.props = {}))['children'] = children as VNodeChild
     vnode.shapeFlag |= isString(children)
       ? ShapeFlags.TEXT_CHILDREN
       : ShapeFlags.ARRAY_CHILDREN
@@ -435,7 +431,7 @@ export function cloneVNode<T, U>(
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, ref, children, transition } = vnode
+  const { props, ref, transition } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   const cloned: VNode<T, U> = {
     __v_isVNode: true,
@@ -456,7 +452,6 @@ export function cloneVNode<T, U>(
         : ref,
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
-    children,
     target: vnode.target,
     targetStart: vnode.targetStart,
     targetAnchor: vnode.targetAnchor,
@@ -548,54 +543,39 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
+  } else if (isVNode(children)) {
+    // single vnode child
+    type = ShapeFlags.ARRAY_CHILDREN
+    children = [children]
   } else if (typeof children === 'object') {
-    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
-      // Normalize slot to plain children for plain element and Teleport
+    if (shapeFlag & ShapeFlags.ELEMENT) {
+      // legacy: unwrap `{ default: ... }` object children (pre-A4
+      // babel-plugin-jsx output / manual h() slot objects)
       const slot = (children as any).default
       if (slot) {
-        // _c marker is added by withCtx() indicating this is a compiled slot
-        slot._c && (slot._d = false)
-        normalizeChildren(vnode, slot())
-        slot._c && (slot._d = true)
+        normalizeChildren(vnode, isFunction(slot) ? slot() : slot)
+        return
       }
-      return
+      children = null
     } else {
-      type = ShapeFlags.SLOTS_CHILDREN
-      const slotFlag = (children as RawSlots)._
-      if (!slotFlag && !isInternalObject(children)) {
-        // if slots are not normalized, attach context instance
-        // (compiled / normalized slots already have context)
-        ;(children as RawSlots)._ctx = currentRenderingInstance
-      } else if (slotFlag === SlotFlags.FORWARDED && currentRenderingInstance) {
-        // a child component receives forwarded slots from the parent.
-        // its slot type is determined by its parent's slot type.
-        if (
-          (currentRenderingInstance.slots as RawSlots)._ === SlotFlags.STABLE
-        ) {
-          ;(children as RawSlots)._ = SlotFlags.STABLE
-        } else {
-          ;(children as RawSlots)._ = SlotFlags.DYNAMIC
-        }
-      }
+      // component with object children — not a valid child value anymore
+      children = null
     }
   } else if (isFunction(children)) {
-    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
-      normalizeChildren(vnode, { default: children })
+    if (shapeFlag & ShapeFlags.ELEMENT) {
+      // function children on elements: invoke once to resolve
+      normalizeChildren(vnode, children())
       return
     }
-    children = { default: children, _ctx: currentRenderingInstance }
-    type = ShapeFlags.SLOTS_CHILDREN
+    // component function children (scoped-slot replacement): keep as-is,
+    // accessible via props.children
   } else {
     children = String(children)
-    // force teleport children to array so it can be moved around
-    if (shapeFlag & ShapeFlags.TELEPORT) {
-      type = ShapeFlags.ARRAY_CHILDREN
-      children = [createTextVNode(children as string)]
-    } else {
-      type = ShapeFlags.TEXT_CHILDREN
-    }
+    type = ShapeFlags.TEXT_CHILDREN
   }
-  vnode.children = children as VNodeNormalizedChildren
+  if (children != null) {
+    ;(vnode.props || (vnode.props = {}))['children'] = children as VNodeChild
+  }
   vnode.shapeFlag |= type
 }
 

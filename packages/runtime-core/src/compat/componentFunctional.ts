@@ -4,7 +4,6 @@ import {
   getCurrentInstance,
 } from '../component'
 import { resolveInjections } from '../componentOptions'
-import type { InternalSlots } from '../componentSlots'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 
@@ -12,12 +11,6 @@ const normalizedFunctionalComponentMap = new WeakMap<
   ComponentOptions,
   FunctionalComponent
 >()
-export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
-  get(target, key: string) {
-    const slot = target[key]
-    return slot && slot()
-  },
-}
 
 export function convertLegacyFunctionalComponent(
   comp: ComponentOptions,
@@ -33,13 +26,12 @@ export function convertLegacyFunctionalComponent(
 
     const legacyCtx = {
       props,
-      children: instance.vnode.children || [],
+      children: (instance.vnode.props && instance.vnode.props.children) || [],
       data: instance.vnode.props || {},
-      scopedSlots: ctx.slots,
       parent: instance.parent && instance.parent.proxy,
-      slots() {
-        return new Proxy(ctx.slots, legacySlotProxyHandlers)
-      },
+      // slots are removed in this fork
+      scopedSlots: {},
+      slots: () => ({}),
       get listeners() {
         return getCompatListeners(instance)
       },

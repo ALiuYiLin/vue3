@@ -1,11 +1,9 @@
 import * as t from '@babel/types'
 import { isHTMLTag, isSVGTag } from '@vue/shared'
-import { SlotFlags } from './slotFlags.ts'
 import type { State } from './interface.ts'
 import type { NodePath } from '@babel/core'
 export const JSX_HELPER_KEY = 'JSX_HELPER_KEY'
 export const FRAGMENT = 'Fragment'
-export const KEEP_ALIVE = 'KeepAlive'
 
 export function createIdentifier(
   state: State,
@@ -26,18 +24,6 @@ export function isDirective(src: string): boolean {
 }
 
 /**
- * Should transformed to slots
- * @param tag string
- * @returns boolean
- */
-// if _Fragment is already imported, it will end with number
-export function shouldTransformedToSlots(tag: string): boolean {
-  return (
-    !new RegExp(String.raw`^_?${FRAGMENT}\d*$`).test(tag) && tag !== KEEP_ALIVE
-  )
-}
-
-/**
  * Check if a Node is a component
  */
 export function checkIsComponent(
@@ -47,17 +33,12 @@ export function checkIsComponent(
   const namePath = path.get('name')
 
   if (namePath.isJSXMemberExpression()) {
-    return shouldTransformedToSlots(namePath.node.property.name) // For withCtx
+    return true
   }
 
   const tag = (namePath as NodePath<t.JSXIdentifier>).node.name
 
-  return (
-    !state.opts.isCustomElement?.(tag) &&
-    shouldTransformedToSlots(tag) &&
-    !isHTMLTag(tag) &&
-    !isSVGTag(tag)
-  )
+  return !state.opts.isCustomElement?.(tag) && !isHTMLTag(tag) && !isSVGTag(tag)
 }
 
 /**
@@ -120,15 +101,12 @@ export function getJSXAttributeName(path: NodePath<t.JSXAttribute>): string {
   if (t.isJSXIdentifier(nameNode)) {
     return nameNode.name
   }
-
-  return `${nameNode.namespace.name}:${nameNode.name.name}`
+  if (t.isJSXNamespacedName(nameNode)) {
+    return `${nameNode.namespace.name}:${nameNode.name.name}`
+  }
+  return ''
 }
 
-/**
- * Transform JSXText to StringLiteral
- * @param path JSXText
- * @returns StringLiteral | null
- */
 export function transformJSXText(
   path: NodePath<t.JSXText | t.StringLiteral>,
 ): t.StringLiteral | null {
@@ -181,76 +159,16 @@ export function transformText(text: string): string {
   return str
 }
 
-/**
- * Transform JSXExpressionContainer to Expression
- * @param path JSXExpressionContainer
- * @returns Expression
- */
 export function transformJSXExpressionContainer(
   path: NodePath<t.JSXExpressionContainer>,
 ): t.Expression {
   return path.get('expression').node as t.Expression
 }
 
-/**
- * Transform JSXSpreadChild
- * @param path JSXSpreadChild
- * @returns SpreadElement
- */
 export function transformJSXSpreadChild(
   path: NodePath<t.JSXSpreadChild>,
 ): t.SpreadElement {
   return t.spreadElement(path.get('expression').node)
-}
-
-export function walksScope(
-  path: NodePath,
-  name: string,
-  slotFlag: (typeof SlotFlags)[keyof typeof SlotFlags],
-): void {
-  if (!path.scope.hasBinding(name) || !path.parentPath) {
-    return
-  }
-
-  if (t.isJSXElement(path.parentPath.node)) {
-    path.parentPath.setData('slotFlag', slotFlag)
-  }
-  walksScope(path.parentPath, name, slotFlag)
-}
-
-export function buildIIFE(
-  path: NodePath<t.JSXElement>,
-  children: t.Expression[],
-): t.Expression[] {
-  const { parentPath } = path
-  if (parentPath.isAssignmentExpression()) {
-    const { left } = parentPath.node as t.AssignmentExpression
-    if (t.isIdentifier(left)) {
-      return children.map(child => {
-        if (t.isIdentifier(child) && child.name === left.name) {
-          const insertName = path.scope.generateUidIdentifier(child.name)
-          parentPath.insertBefore(
-            t.variableDeclaration('const', [
-              t.variableDeclarator(
-                insertName,
-                t.callExpression(
-                  t.functionExpression(
-                    null,
-                    [],
-                    t.blockStatement([t.returnStatement(child)]),
-                  ),
-                  [],
-                ),
-              ),
-            ]),
-          )
-          return insertName
-        }
-        return child
-      })
-    }
-  }
-  return children
 }
 
 const onRE = /^on[^a-z]/
@@ -290,7 +208,6 @@ export function dedupeProperties(
         deduped.push(prop)
       }
     } else {
-      // v-model target with variable
       deduped.push(prop)
     }
   })
@@ -339,13 +256,6 @@ export function transformJSXSpreadAttribute(
     ? argument.node.properties
     : undefined
   if (!properties) {
-    if (argument.isIdentifier()) {
-      walksScope(
-        nodePath,
-        (argument.node as t.Identifier).name,
-        SlotFlags.DYNAMIC,
-      )
-    }
     args.push(mergeProps ? argument.node : t.spreadElement(argument.node))
   } else if (mergeProps) {
     args.push(t.objectExpression(properties))

@@ -60,7 +60,7 @@ export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { useAttrs, useSlots } from './apiSetupHelpers'
+export { useAttrs } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
 export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
@@ -79,7 +79,6 @@ export {
   defineEmits,
   defineExpose,
   defineOptions,
-  defineSlots,
   defineModel,
   withDefaults,
   type DefineProps,
@@ -296,7 +295,7 @@ export type {
   ElementNamespace,
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
-export type { Slot, Slots, SlotsType } from './componentSlots'
+export type { SlotsType } from './component'
 export type {
   Prop,
   PropType,
@@ -334,16 +333,9 @@ export type { HMRRuntime } from './hmr'
 
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeHelpers.ts'
-export {
-  withCtx,
-  pushScopeId,
-  popScopeId,
-  withScopeId,
-} from './componentRenderContext'
+export { pushScopeId, popScopeId } from './componentRenderContext'
 export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
-export { renderSlot } from './helpers/renderSlot'
-export { createSlots } from './helpers/createSlots'
 export {
   createTextVNode,
   createCommentVNode,
@@ -377,7 +369,6 @@ import {
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
-import { ensureValidVNode } from './helpers/renderSlot'
 import { popWarningContext, pushWarningContext } from './warning'
 
 const _ssrUtils: {
@@ -388,7 +379,6 @@ const _ssrUtils: {
   isVNode: typeof isVNode
   normalizeVNode: typeof normalizeVNode
   getComponentPublicInstance: typeof getComponentPublicInstance
-  ensureValidVNode: typeof ensureValidVNode
   pushWarningContext: typeof pushWarningContext
   popWarningContext: typeof popWarningContext
 } = {
@@ -399,7 +389,6 @@ const _ssrUtils: {
   isVNode,
   normalizeVNode,
   getComponentPublicInstance,
-  ensureValidVNode,
   pushWarningContext,
   popWarningContext,
 }

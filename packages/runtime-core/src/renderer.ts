@@ -52,7 +52,6 @@ import {
   resetTracking,
 } from '@vue/reactivity'
 import { updateProps } from './componentProps'
-import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
 import { type CreateAppFunction, createAppAPI } from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
@@ -429,16 +428,17 @@ function baseCreateRenderer(
   }
 
   const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
+    const children = n2.props && n2.props.children
     if (n1 == null) {
       hostInsert(
-        (n2.el = hostCreateText(n2.children as string)),
+        (n2.el = hostCreateText(children as string)),
         container,
         anchor,
       )
     } else {
       const el = (n2.el = n1.el!)
-      if (n2.children !== n1.children) {
-        hostSetText(el, n2.children as string)
+      if (children !== (n1.props && n1.props.children)) {
+        hostSetText(el, children as string)
       }
     }
   }
@@ -451,7 +451,9 @@ function baseCreateRenderer(
   ) => {
     if (n1 == null) {
       hostInsert(
-        (n2.el = hostCreateComment((n2.children as string) || '')),
+        (n2.el = hostCreateComment(
+          (n2.props && (n2.props.children as string)) || '',
+        )),
         container,
         anchor,
       )
@@ -470,7 +472,7 @@ function baseCreateRenderer(
     // static nodes are only present when used with compiler-dom/runtime-dom
     // which guarantees presence of hostInsertStaticContent.
     ;[n2.el, n2.anchor] = hostInsertStaticContent!(
-      n2.children as string,
+      (n2.props && (n2.props.children as string)) || '',
       container,
       anchor,
       namespace,
@@ -489,13 +491,13 @@ function baseCreateRenderer(
     namespace: ElementNamespace,
   ) => {
     // static nodes are only patched during dev for HMR
-    if (n2.children !== n1.children) {
+    if ((n2.props && n2.props.children) !== (n1.props && n1.props.children)) {
       const anchor = hostNextSibling(n1.anchor!)
       // remove existing
       removeStaticNode(n1)
       // insert new
       ;[n2.el, n2.anchor] = hostInsertStaticContent!(
-        n2.children as string,
+        (n2.props && (n2.props.children as string)) || '',
         container,
         anchor,
         namespace,
@@ -603,11 +605,12 @@ function baseCreateRenderer(
 
     // mount children first, since some props may rely on child content
     // being already rendered, e.g. `<select value>`
+    const children = props && props.children
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-      hostSetElementText(el, vnode.children as string)
+      hostSetElementText(el, children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       mountChildren(
-        vnode.children as VNodeArrayChildren,
+        children as VNodeArrayChildren,
         el,
         null,
         parentComponent,
@@ -625,7 +628,7 @@ function baseCreateRenderer(
     // props
     if (props) {
       for (const key in props) {
-        if (key !== 'value' && !isReservedProp(key)) {
+        if (key !== 'value' && key !== 'children' && !isReservedProp(key)) {
           hostPatchProp(el, key, null, props[key], namespace, parentComponent)
         }
       }
@@ -805,7 +808,11 @@ function baseCreateRenderer(
     if (oldProps !== newProps) {
       if (oldProps !== EMPTY_OBJ) {
         for (const key in oldProps) {
-          if (!isReservedProp(key) && !(key in newProps)) {
+          if (
+            key !== 'children' &&
+            !isReservedProp(key) &&
+            !(key in newProps)
+          ) {
             hostPatchProp(
               el,
               key,
@@ -819,7 +826,7 @@ function baseCreateRenderer(
       }
       for (const key in newProps) {
         // empty string is not valid prop
-        if (isReservedProp(key)) continue
+        if (key === 'children' || isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]
         // defer patching value
@@ -864,7 +871,7 @@ function baseCreateRenderer(
         // such fragment like `<></>` will be compiled into
         // a fragment which doesn't have a children.
         // In this case fallback to an empty array
-        (n2.children || []) as VNodeArrayChildren,
+        (n2.props && (n2.props.children as VNodeArrayChildren)) || [],
         container,
         fragmentEndAnchor,
         parentComponent,
@@ -1261,7 +1268,6 @@ function baseCreateRenderer(
     instance.vnode = nextVNode
     instance.next = null
     updateProps(instance, nextVNode.props, prevProps)
-    updateSlots(instance, nextVNode.children)
 
     pauseTracking()
     // props update may have triggered pre-flush watchers.
@@ -1280,9 +1286,9 @@ function baseCreateRenderer(
     namespace: ElementNamespace,
     slotScopeIds,
   ) => {
-    const c1 = n1 && n1.children
+    const c1 = n1 && n1.props && n1.props.children
     const prevShapeFlag = n1 ? n1.shapeFlag : 0
-    const c2 = n2.children
+    const c2 = n2.props && n2.props.children
 
     const { shapeFlag } = n2
     // children has 3 possibilities: text, array or no children.
@@ -1573,7 +1579,8 @@ function baseCreateRenderer(
     moveType,
     parentSuspense = null,
   ) => {
-    const { el, type, transition, children, shapeFlag } = vnode
+    const { el, type, transition, shapeFlag } = vnode
+    const children = vnode.props && vnode.props.children
     if (shapeFlag & ShapeFlags.COMPONENT) {
       move(vnode.component!.subTree, container, anchor, moveType)
       return
@@ -1655,7 +1662,8 @@ function baseCreateRenderer(
     parentSuspense,
     doRemove = false,
   ) => {
-    const { props, ref, children, shapeFlag, dirs, cacheIndex, memo } = vnode
+    const { props, ref, shapeFlag, dirs, cacheIndex, memo } = vnode
+    const children = props && props.children
 
     // unset ref
     if (ref != null) {
@@ -1952,8 +1960,8 @@ export function traverseStaticChildren(
   n2: VNode,
   shallow = false,
 ): void {
-  const ch1 = n1.children
-  const ch2 = n2.children
+  const ch1 = n1.props && n1.props.children
+  const ch2 = n2.props && n2.props.children
   if (isArray(ch1) && isArray(ch2)) {
     for (let i = 0; i < ch1.length; i++) {
       const c1 = ch1[i] as VNode

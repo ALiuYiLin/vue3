@@ -27,13 +27,6 @@ import {
   initProps,
   normalizePropsOptions,
 } from './componentProps'
-import {
-  type InternalSlots,
-  type Slots,
-  type SlotsType,
-  type UnwrapSlotsType,
-  initSlots,
-} from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import {
@@ -61,7 +54,6 @@ import {
 } from './componentEmits'
 import {
   EMPTY_OBJ,
-  type IfAny,
   NOOP,
   ShapeFlags,
   extend,
@@ -217,16 +209,21 @@ export interface FunctionalComponent<
   EE extends EmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (
-    props: P & EmitsToProps<EE>,
-    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>,
-  ): any
+  (props: P & EmitsToProps<EE>, ctx: Omit<SetupContext<EE>, 'expose'>): any
   props?: ComponentPropsOptions<P>
   emits?: EE | (keyof EE)[]
-  slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
   compatConfig?: CompatConfig
+}
+
+declare const SlotSymbol: unique symbol
+/**
+ * Inert type marker kept for public typing compatibility. Slots are removed
+ * from this fork: children are passed via `props.children` instead.
+ */
+export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
+  [SlotSymbol]?: T
 }
 
 export interface ClassComponent {
@@ -273,13 +270,9 @@ export type { ComponentOptions }
 export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
-export type SetupContext<
-  E = EmitsOptions,
-  S extends SlotsType = {},
-> = E extends any
+export type SetupContext<E = EmitsOptions> = E extends any
   ? {
       attrs: Attrs
-      slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
         exposed?: Exposed,
@@ -455,7 +448,6 @@ export interface ComponentInternalInstance {
   data: Data
   props: Data
   attrs: Data
-  slots: InternalSlots
   refs: Data
   emit: EmitFn
 
@@ -656,7 +648,6 @@ export function createComponentInstance(
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
-    slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
@@ -800,10 +791,9 @@ export function setupComponent(
 ): Promise<void> | undefined {
   isSSR && setInSSRSetupState(isSSR)
 
-  const { props, children } = instance.vnode
+  const { props } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
@@ -1091,18 +1081,6 @@ const attrsProxyHandlers = __DEV__
       },
     }
 
-/**
- * Dev-only
- */
-function getSlotsProxy(instance: ComponentInternalInstance): Slots {
-  return new Proxy(instance.slots, {
-    get(target, key: string) {
-      track(instance, TrackOpTypes.GET, '$slots')
-      return target[key]
-    },
-  })
-}
-
 export function createSetupContext(
   instance: ComponentInternalInstance,
 ): SetupContext {
@@ -1134,16 +1112,12 @@ export function createSetupContext(
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     let attrsProxy: Attrs
-    let slotsProxy: Slots
     return Object.freeze({
       get attrs() {
         return (
           attrsProxy ||
           (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers) as Attrs)
         )
-      },
-      get slots() {
-        return slotsProxy || (slotsProxy = getSlotsProxy(instance))
       },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
@@ -1153,7 +1127,6 @@ export function createSetupContext(
   } else {
     return {
       attrs: new Proxy(instance.attrs, attrsProxyHandlers) as Attrs,
-      slots: instance.slots,
       emit: instance.emit,
       expose,
     }

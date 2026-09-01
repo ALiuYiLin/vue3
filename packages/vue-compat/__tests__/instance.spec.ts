@@ -1,7 +1,5 @@
 import type { Mock } from 'vitest'
 import Vue from '@vue/compat'
-import type { Slots } from '../../runtime-core/src/componentSlots'
-import { Text } from '../../runtime-core/src/vnode'
 import {
   DeprecationTypes,
   deprecationData,
@@ -257,57 +255,7 @@ test('INSTANCE_LISTENERS', () => {
   ).toHaveBeenWarned()
 })
 
-describe('INSTANCE_SCOPED_SLOTS', () => {
-  test('explicit usage', () => {
-    let slots: Slots
-    new Vue({
-      template: `<child v-slot="{ msg }">{{ msg }}</child>`,
-      components: {
-        child: {
-          compatConfig: { RENDER_FUNCTION: false },
-          render() {
-            slots = this.$scopedSlots
-          },
-        },
-      },
-    }).$mount()
-
-    expect(slots!.default!({ msg: 'hi' })).toMatchObject([
-      {
-        type: Text,
-        children: 'hi',
-      },
-    ])
-
-    expect(
-      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message,
-    ).toHaveBeenWarned()
-  })
-
-  test('should include legacy slot usage in $scopedSlots', () => {
-    let normalSlots: Slots
-    let scopedSlots: Slots
-    new Vue({
-      template: `<child><div>default</div></child>`,
-      components: {
-        child: {
-          compatConfig: { RENDER_FUNCTION: false },
-          render(this: LegacyPublicInstance) {
-            normalSlots = this.$slots
-            scopedSlots = this.$scopedSlots
-          },
-        },
-      },
-    }).$mount()
-
-    expect('default' in normalSlots!).toBe(true)
-    expect('default' in scopedSlots!).toBe(true)
-
-    expect(
-      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message,
-    ).toHaveBeenWarned()
-  })
-})
+describe('INSTANCE_SCOPED_SLOTS', () => {})
 
 test('INSTANCE_ATTR_CLASS_STYLE', () => {
   const vm = new Vue({

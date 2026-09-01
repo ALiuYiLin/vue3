@@ -319,6 +319,14 @@ function setFullProps(
         continue
       }
 
+      // children always lives on the props object (never attrs fallthrough)
+      if (key === 'children') {
+        if (!(options && hasOwn(options, camelize(key)))) {
+          props[key] = rawProps[key]
+          continue
+        }
+      }
+
       if (__COMPAT__) {
         if (key.startsWith('onHook:')) {
           softAssertCompatEnabled(

@@ -1,8 +1,5 @@
 import type { File } from '@babel/core'
-import type * as t from '@babel/types'
 import type { Options } from '@vue/babel-plugin-resolve-type'
-
-export type Slots = t.Identifier | t.ObjectExpression | null
 
 export type State = {
   get: (name: string) => any
@@ -14,14 +11,10 @@ export type State = {
 export interface VueJSXPluginOptions {
   /** transform `on: { click: xx }` to `onClick: xxx` */
   transformOn?: boolean
-  /** enable optimization or not. */
-  optimize?: boolean
   /** merge static and dynamic class / style attributes / onXXX handlers */
   mergeProps?: boolean
   /** configuring custom elements */
   isCustomElement?: (tag: string) => boolean
-  /** enable object slots syntax */
-  enableObjectSlots?: boolean
   /** Replace the function used when compiling JSX expressions */
   pragma?: string
   /**

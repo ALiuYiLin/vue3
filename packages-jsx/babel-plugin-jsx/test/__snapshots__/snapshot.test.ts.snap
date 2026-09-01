@@ -2,8 +2,8 @@
 
 exports[`_Fragment already imported > _Fragment already imported 1`] = `
 "import { Fragment as _Fragment, Fragment as _Fragment2, createTextVNode as _createTextVNode, createVNode as _createVNode } from 'vue';
-const Root1 = () => _createVNode(_Fragment2, null, [_createTextVNode("root1")]);
-const Root2 = () => _createVNode(_Fragment, null, [_createTextVNode("root2")]);"
+const Root1 = () => _createVNode(_Fragment2, null, _createTextVNode("root1"));
+const Root2 = () => _createVNode(_Fragment, null, _createTextVNode("root2"));"
 `;
 
 exports[`MereProps Order > MereProps Order 1`] = `
@@ -12,7 +12,7 @@ _createVNode("button", _mergeProps({
   "loading": true
 }, x, {
   "type": "submit"
-}), [_createTextVNode("btn")]);"
+}), _createTextVNode("btn"));"
 `;
 
 exports[`Merge class/ style attributes into array > Merge class/ style attributes into array 1`] = `
@@ -38,7 +38,7 @@ createVNode('div', null, ['Without JSX should work']);"
 
 exports[`Without props > Without props 1`] = `
 "import { createTextVNode as _createTextVNode, createVNode as _createVNode } from "vue";
-_createVNode("a", null, [_createTextVNode("a")]);"
+_createVNode("a", null, _createTextVNode("a"));"
 `;
 
 exports[`custom directive > custom directive 1`] = `
@@ -48,19 +48,7 @@ _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDire
 
 exports[`custom directive > custom directive 2`] = `
 "import { Fragment as _Fragment, resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_createVNode(_Fragment, null, [_withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x, 'y']]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x, 'y', {
-  a: true,
-  b: true
-}]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x, void 0, {
-  a: true,
-  b: true
-}]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x, y, {
-  a: true,
-  b: true
-}]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x, y, {
-  a: true,
-  b: true
-}]])]);"
+_createVNode(_Fragment, null, [_withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), x]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), [x]]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), [x, 'y']]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), [x, 'y', ['a', 'b']]]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), [x, ['a', 'b']]]]), _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[_resolveDirective("xxx"), [x, y, ['a', 'b']]]])]);"
 `;
 
 exports[`directive in scope > directive in scope 1`] = `
@@ -69,75 +57,9 @@ const vXxx = {};
 _withDirectives(_createVNode(_resolveComponent("A"), null, null), [[vXxx]]);"
 `;
 
-exports[`disable object slot syntax with defaultSlot > defaultSlot 1`] = `
-"import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-_createVNode(_resolveComponent("Badge"), null, {
-  default: () => [slots.default()],
-  _: 1
-});"
-`;
-
-exports[`dynamic type in input > dynamic type in input 1`] = `
-"import { vModelDynamic as _vModelDynamic, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("input", {
-  "type": type,
-  "onUpdate:modelValue": $event => test = $event
-}, null), [[_vModelDynamic, test]]);"
-`;
-
-exports[`input[type="checkbox"] > input[type="checkbox"] 1`] = `
-"import { vModelCheckbox as _vModelCheckbox, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("input", {
-  "type": "checkbox",
-  "onUpdate:modelValue": $event => test = $event
-}, null), [[_vModelCheckbox, test]]);"
-`;
-
-exports[`input[type="radio"] > input[type="radio"] 1`] = `
-"import { Fragment as _Fragment, vModelRadio as _vModelRadio, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_createVNode(_Fragment, null, [_withDirectives(_createVNode("input", {
-  "type": "radio",
-  "value": "1",
-  "onUpdate:modelValue": $event => test = $event,
-  "name": "test"
-}, null), [[_vModelRadio, test]]), _withDirectives(_createVNode("input", {
-  "type": "radio",
-  "value": "2",
-  "onUpdate:modelValue": $event => test = $event,
-  "name": "test"
-}, null), [[_vModelRadio, test]])]);"
-`;
-
-exports[`input[type="text"] .lazy modifier > input[type="text"] .lazy modifier 1`] = `
-"import { vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("input", {
-  "onUpdate:modelValue": $event => test = $event
-}, null), [[_vModelText, test, void 0, {
-  lazy: true
-}]]);"
-`;
-
-exports[`input[type="text"] > input[type="text"] 1`] = `
-"import { vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("input", {
-  "onUpdate:modelValue": $event => test = $event
-}, null), [[_vModelText, test]]);"
-`;
-
 exports[`isCustomElement > isCustomElement 1`] = `
 "import { createTextVNode as _createTextVNode, createVNode as _createVNode } from "vue";
-_createVNode("foo", null, [_createVNode("span", null, [_createTextVNode("foo")])]);"
-`;
-
-exports[`named import specifier \`Keep Alive\` > named import specifier \`Keep Alive\` 1`] = `
-"import { KeepAlive, createTextVNode as _createTextVNode, createVNode as _createVNode } from 'vue';
-_createVNode(KeepAlive, null, [_createTextVNode("123")]);"
-`;
-
-exports[`namespace specifier \`Keep Alive\` > namespace specifier \`Keep Alive\` 1`] = `
-"import { createTextVNode as _createTextVNode, createVNode as _createVNode } from "vue";
-import * as Vue from 'vue';
-_createVNode(Vue.KeepAlive, null, [_createTextVNode("123")]);"
+_createVNode("foo", null, _createVNode("span", null, _createTextVNode("foo")));"
 `;
 
 exports[`override props multiple > multiple 1`] = `
@@ -159,123 +81,67 @@ exports[`override props single > single 1`] = `
 _createVNode("div", a, null);"
 `;
 
-exports[`passing object slots via JSX children directive in slot > directive in slot 1`] = `
+exports[`passing children via JSX directive in children > directive in children 1`] = `
 "import { Fragment as _Fragment, resolveDirective as _resolveDirective, createVNode as _createVNode, withDirectives as _withDirectives, resolveComponent as _resolveComponent } from "vue";
-_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), null, {
-  default: () => [_withDirectives(_createVNode("div", null, null), [[_resolveDirective("xxx")]]), foo]
-}), _createVNode(_resolveComponent("A"), null, {
-  default: () => [_createVNode(_resolveComponent("B"), null, {
-    default: () => [_withDirectives(_createVNode("div", null, null), [[_resolveDirective("xxx")]]), foo]
-  })]
-})]);"
+_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), null, [_withDirectives(_createVNode("div", null, null), [[_resolveDirective("xxx")]]), foo]), _createVNode(_resolveComponent("A"), null, _createVNode(_resolveComponent("B"), null, [_withDirectives(_createVNode("div", null, null), [[_resolveDirective("xxx")]]), foo]))]);"
 `;
 
-exports[`passing object slots via JSX children directive in slot, in scope > directive in slot, in scope 1`] = `
+exports[`passing children via JSX directive in children, in scope > directive in children, in scope 1`] = `
 "import { Fragment as _Fragment, createVNode as _createVNode, withDirectives as _withDirectives, resolveComponent as _resolveComponent } from "vue";
 const vXxx = {};
-_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), null, {
-  default: () => [_withDirectives(_createVNode("div", null, null), [[vXxx]]), foo],
-  _: 1
-}), _createVNode(_resolveComponent("A"), null, {
-  default: () => [_createVNode(_resolveComponent("B"), null, {
-    default: () => [_withDirectives(_createVNode("div", null, null), [[vXxx]]), foo],
-    _: 1
-  })]
-})]);"
+_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), null, [_withDirectives(_createVNode("div", null, null), [[vXxx]]), foo]), _createVNode(_resolveComponent("A"), null, _createVNode(_resolveComponent("B"), null, [_withDirectives(_createVNode("div", null, null), [[vXxx]]), foo]))]);"
 `;
 
-exports[`passing object slots via JSX children multiple expressions > multiple expressions 1`] = `
+exports[`passing children via JSX multiple expressions > multiple expressions 1`] = `
 "import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-_createVNode(_resolveComponent("A"), null, {
-  default: () => [foo, bar],
-  _: 1
-});"
+_createVNode(_resolveComponent("A"), null, [foo, bar]);"
 `;
 
-exports[`passing object slots via JSX children no directive in slot > no directive in slot 1`] = `
+exports[`passing children via JSX no directive in children > no directive in children 1`] = `
 "import { Fragment as _Fragment, createVNode as _createVNode, resolveComponent as _resolveComponent } from "vue";
-_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), null, {
-  default: () => [_createVNode("div", null, null), foo],
-  _: 1
-}), _createVNode(_resolveComponent("A"), null, {
-  default: () => [_createVNode(_resolveComponent("B"), null, {
-    default: () => [_createVNode("div", null, null), foo],
-    _: 1
-  })]
-})]);"
+_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), null, [_createVNode("div", null, null), foo]), _createVNode(_resolveComponent("A"), null, _createVNode(_resolveComponent("B"), null, [_createVNode("div", null, null), foo]))]);"
 `;
 
-exports[`passing object slots via JSX children single expression, function expression > single expression, function expression 1`] = `
+exports[`passing children via JSX single expression, function expression > single expression, function expression 1`] = `
 "import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-_createVNode(_resolveComponent("A"), null, {
-  default: () => "foo"
-});"
+_createVNode(_resolveComponent("A"), null, () => "foo");"
 `;
 
-exports[`passing object slots via JSX children single expression, non-literal value: runtime check > single expression, non-literal value: runtime check 1`] = `
-"import { resolveComponent as _resolveComponent, isVNode as _isVNode, createVNode as _createVNode } from "vue";
-let _slot;
-function _isSlot(s) {
-  return typeof s === 'function' || Object.prototype.toString.call(s) === '[object Object]' && !_isVNode(s);
-}
+exports[`passing children via JSX single expression, non-literal value > single expression, non-literal value 1`] = `
+"import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
 const foo = () => 1;
-_createVNode(_resolveComponent("A"), null, _isSlot(_slot = foo()) ? _slot : {
-  default: () => [_slot],
-  _: 1
-});"
+_createVNode(_resolveComponent("A"), null, foo());"
 `;
 
 exports[`reassign variable as component > reassign variable as component 1`] = `
-"import { defineComponent, createVNode as _createVNode, isVNode as _isVNode } from 'vue';
-function _isSlot(s) {
-  return typeof s === 'function' || Object.prototype.toString.call(s) === '[object Object]' && !_isVNode(s);
-}
+"import { defineComponent, createVNode as _createVNode } from 'vue';
 let a = 1;
 const A = defineComponent({
   setup(_, {
-    slots
+    attrs
   }) {
-    return () => _createVNode("span", null, [slots.default()]);
+    return () => _createVNode("span", null, attrs.foo);
   }
 });
 const _a2 = 2;
 a = _a2;
-const _a = function () {
-  return a;
-}();
-a = _createVNode(A, null, _isSlot(a) ? a : {
-  default: () => [_a],
-  _: 2
-});"
-`;
-
-exports[`select > select 1`] = `
-"import { createTextVNode as _createTextVNode, createVNode as _createVNode, vModelSelect as _vModelSelect, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("select", {
-  "onUpdate:modelValue": $event => test = $event
-}, [_createVNode("option", {
-  "value": "1"
-}, [_createTextVNode("a")]), _createVNode("option", {
-  "value": 2
-}, [_createTextVNode("b")]), _createVNode("option", {
-  "value": 3
-}, [_createTextVNode("c")])]), [[_vModelSelect, test]]);"
+a = _createVNode(A, null, a);"
 `;
 
 exports[`set pragma to custom > custom 1`] = `
 "import { createTextVNode as _createTextVNode } from "vue";
-custom("div", null, [_createTextVNode("pragma")]);"
+custom("div", null, _createTextVNode("pragma"));"
 `;
 
 exports[`should keep \`import * as Vue from "vue"\` > should keep \`import * as Vue from "vue"\` 1`] = `
 "import { createTextVNode as _createTextVNode, createVNode as _createVNode } from "vue";
 import * as Vue from 'vue';
-_createVNode("div", null, [_createTextVNode("Vue")]);"
+_createVNode("div", null, _createTextVNode("Vue"));"
 `;
 
 exports[`single no need for a mergeProps call > single no need for a mergeProps call 1`] = `
 "import { createTextVNode as _createTextVNode, createVNode as _createVNode } from "vue";
-_createVNode("div", x, [_createTextVNode("single")]);"
+_createVNode("div", x, _createTextVNode("single"));"
 `;
 
 exports[`specifiers should be merged into a single importDeclaration > specifiers should be merged into a single importDeclaration 1`] = `
@@ -284,109 +150,15 @@ import { vShow } from 'vue';
 _createVNode(_Fragment, null, null);"
 `;
 
-exports[`textarea > textarea 1`] = `
-"import { vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("textarea", {
-  "onUpdate:modelValue": $event => test = $event
-}, null), [[_vModelText, test]]);"
-`;
-
 exports[`use "@jsx" comment specify pragma > use "@jsx" comment specify pragma 1`] = `
 "import { createTextVNode as _createTextVNode } from "vue";
 /* @jsx custom */
 custom("div", {
   "id": "custom"
-}, [_createTextVNode("Hello")]);"
-`;
-
-exports[`use "model" as the prop name > use "model" as the prop name 1`] = `
-"import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-_createVNode(_resolveComponent("C"), {
-  "model": foo,
-  "onUpdate:model": $event => foo = $event
-}, null);"
-`;
-
-exports[`using v-slots without children should not be spread > using v-slots without children should not be spread 1`] = `
-"import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-_createVNode(_resolveComponent("A"), null, slots);"
-`;
-
-exports[`v-model target value support variable > v-model target value support variable 1`] = `
-"import { Fragment as _Fragment, resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-const foo = 'foo';
-const a = () => 'a';
-const b = {
-  c: 'c'
-};
-_createVNode(_Fragment, null, [_createVNode(_resolveComponent("A"), {
-  [foo]: xx,
-  ["onUpdate:" + foo]: $event => xx = $event
-}, null), _createVNode(_resolveComponent("B"), {
-  "modelValue": xx,
-  "modelModifiers": {
-    "a": true
-  },
-  "onUpdate:modelValue": $event => xx = $event
-}, null), _createVNode(_resolveComponent("C"), {
-  [foo]: xx,
-  [foo + "Modifiers"]: {
-    "a": true
-  },
-  ["onUpdate:" + foo]: $event => xx = $event
-}, null), _createVNode(_resolveComponent("D"), {
-  [foo === 'foo' ? 'a' : 'b']: xx,
-  [(foo === 'foo' ? 'a' : 'b') + "Modifiers"]: {
-    "a": true
-  },
-  ["onUpdate:" + (foo === 'foo' ? 'a' : 'b')]: $event => xx = $event
-}, null), _createVNode(_resolveComponent("E"), {
-  [a()]: xx,
-  [a() + "Modifiers"]: {
-    "a": true
-  },
-  ["onUpdate:" + a()]: $event => xx = $event
-}, null), _createVNode(_resolveComponent("F"), {
-  [b.c]: xx,
-  [b.c + "Modifiers"]: {
-    "a": true
-  },
-  ["onUpdate:" + b.c]: $event => xx = $event
-}, null)]);"
+}, _createTextVNode("Hello"));"
 `;
 
 exports[`v-show > v-show 1`] = `
 "import { createTextVNode as _createTextVNode, vShow as _vShow, createVNode as _createVNode, withDirectives as _withDirectives } from "vue";
-_withDirectives(_createVNode("div", null, [_createTextVNode("vShow")]), [[_vShow, x]]);"
-`;
-
-exports[`vHtml > vHtml 1`] = `
-"import { createVNode as _createVNode } from "vue";
-_createVNode("h1", {
-  "innerHTML": "<div>foo</div>"
-}, null);"
-`;
-
-exports[`vModels > vModels 1`] = `
-"import { resolveComponent as _resolveComponent, createVNode as _createVNode } from "vue";
-_createVNode(_resolveComponent("C"), {
-  "modelValue": foo,
-  "modelModifiers": {
-    "modifier": true
-  },
-  "onUpdate:modelValue": $event => foo = $event,
-  "bar": bar,
-  "barModifiers": {
-    "modifier1": true,
-    "modifier2": true
-  },
-  "onUpdate:bar": $event => bar = $event
-}, null);"
-`;
-
-exports[`vText > vText 1`] = `
-"import { createVNode as _createVNode } from "vue";
-_createVNode("div", {
-  "textContent": text
-}, null);"
+_withDirectives(_createVNode("div", null, _createTextVNode("vShow")), [[_vShow, x]]);"
 `;

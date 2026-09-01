@@ -50,7 +50,7 @@ import {
   shouldCacheAccess,
 } from './componentOptions'
 import type { EmitFn, EmitsOptions } from './componentEmits'
-import type { SlotsType, UnwrapSlotsType } from './componentSlots'
+import type { SlotsType } from './component'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -309,7 +309,6 @@ export type ComponentPublicInstance<
     : Prettify<P> & PublicProps
   $attrs: Attrs
   $refs: Data & TypeRefs
-  $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $host: Element | null
@@ -367,7 +366,6 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $data: i => i.data,
     $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
     $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
-    $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
     $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
     $parent: i => getPublicInstance(i.parent),
     $root: i => getPublicInstance(i.root),
@@ -468,9 +466,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (key === '$attrs') {
         track(instance.attrs, TrackOpTypes.GET, '')
         __DEV__ && markAttrsAccessed()
-      } else if (__DEV__ && key === '$slots') {
-        // for HMR only
-        track(instance, TrackOpTypes.GET, key)
       }
       return publicGetter(instance)
     } else if (

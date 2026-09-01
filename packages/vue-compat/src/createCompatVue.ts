@@ -6,7 +6,6 @@ import {
   DeprecationTypes,
   compatUtils,
   createApp,
-  vModelDynamic,
   vShow,
 } from '@vue/runtime-dom'
 import { extend } from '@vue/shared'
@@ -27,7 +26,6 @@ function wrappedCreateApp(...args: any[]) {
     // built-in directives. No need for prefix since there's no render fn API
     // for resolving directives via string in v3.
     app._context.directives.show = vShow
-    app._context.directives.model = vModelDynamic
   }
   return app
 }

@@ -1,6 +1,5 @@
 import { h } from '../src/h'
 import { createVNode } from '../src/vnode'
-import type { RawSlots } from '../src/componentSlots'
 
 // Since h is a thin layer on top of createVNode, we are only testing its
 // own logic here. Details of vnode creation is tested in vnode.spec.ts.
@@ -32,14 +31,8 @@ describe('renderer: h', () => {
   test('type + props + children', () => {
     // array
     expect(h('div', {}, ['foo'])).toMatchObject(createVNode('div', {}, ['foo']))
-    // slots
-    const slots = {} as RawSlots
-    expect(h('div', {}, slots)).toMatchObject(createVNode('div', {}, slots))
     const Component = { template: '<br />' }
-    expect(h(Component, {}, slots)).toMatchObject(
-      createVNode(Component, {}, slots),
-    )
-    // default slot
+    // function children
     const slot = () => {}
     expect(h(Component, {}, slot)).toMatchObject(
       createVNode(Component, {}, slot),
@@ -51,17 +44,11 @@ describe('renderer: h', () => {
     expect(h('div', {}, 'foo')).toMatchObject(createVNode('div', {}, 'foo'))
   })
 
-  test('named slots with null props', () => {
+  test('function children with null props', () => {
     const Component = { template: '<br />' }
     const slot = () => {}
-    expect(
-      h(Component, null, {
-        foo: slot,
-      }),
-    ).toMatchObject(
-      createVNode(Component, null, {
-        foo: slot,
-      }),
+    expect(h(Component, null, slot)).toMatchObject(
+      createVNode(Component, null, slot),
     )
   })
 
@@ -71,7 +58,7 @@ describe('renderer: h', () => {
   test('support variadic children', () => {
     // @ts-expect-error
     const vnode = h('div', null, h('span'), h('span'))
-    expect(vnode.children).toMatchObject([
+    expect(vnode.props!.children).toMatchObject([
       {
         type: 'span',
       },

@@ -110,7 +110,7 @@ describe('api: setup context', () => {
 
     const Wrapper = {
       render(this: any) {
-        return this.$slots.default()
+        return this.$props.children()
       },
     }
 
@@ -118,10 +118,7 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(_: any, { attrs }: any) {
         return () => {
-          const vnode = h(Wrapper, null, {
-            default: () => [h('div', attrs)],
-            _: 1, // mark stable slots
-          })
+          const vnode = h(Wrapper, null, () => [h('div', attrs)])
           return vnode
         }
       },
@@ -135,33 +132,6 @@ describe('api: setup context', () => {
     toggle.value = false
     await nextTick()
     expect(serializeInner(root)).toMatch(`<div class="baz"></div>`)
-  })
-
-  it('context.slots', async () => {
-    const id = ref('foo')
-
-    const Parent = {
-      render: () =>
-        h(Child, null, {
-          foo: () => id.value,
-          bar: () => 'bar',
-        }),
-    }
-
-    const Child = {
-      setup(props: any, { slots }: any) {
-        return () => h('div', [...slots.foo(), ...slots.bar()])
-      },
-    }
-
-    const root = nodeOps.createElement('div')
-    render(h(Parent), root)
-    expect(serializeInner(root)).toMatch(`<div>foobar</div>`)
-
-    // should update even though it's not reactive
-    id.value = 'baz'
-    await nextTick()
-    expect(serializeInner(root)).toMatch(`<div>bazbar</div>`)
   })
 
   it('context.emit', async () => {

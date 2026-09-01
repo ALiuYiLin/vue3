@@ -19,11 +19,8 @@ import {
   onServerPrefetch,
   reactive,
   ref,
-  renderSlot,
   useCssVars,
-  vModelCheckbox,
   vShow,
-  withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
@@ -94,7 +91,7 @@ describe('SSR hydration', () => {
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.el.outerHTML).toBe(html)
     expect(vnode.anchor).toBe(container.firstChild)
-    expect(vnode.children).toBe(html)
+    expect(vnode.props!.children).toBe(html)
   })
 
   test('static (multiple elements)', () => {
@@ -113,7 +110,7 @@ describe('SSR hydration', () => {
     expect(n2.el).toBe(div.lastChild)
     expect(s.el).toBe(div.childNodes[1])
     expect(s.anchor).toBe(div.childNodes[2])
-    expect(s.children).toBe(staticContent)
+    expect(s.props!.children).toBe(staticContent)
   })
 
   // #6008
@@ -134,7 +131,7 @@ describe('SSR hydration', () => {
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.anchor).toBe(container.lastChild)
-    expect(vnode.children).toBe(html)
+    expect(vnode.props!.children).toBe(html)
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 
@@ -172,10 +169,10 @@ describe('SSR hydration', () => {
         ]),
     )
     expect(vnode.el).toBe(container.firstChild)
-    expect((vnode.children as VNode[])[0].el).toBe(
+    expect((vnode.props!.children as VNode[])[0].el).toBe(
       container.firstChild!.childNodes[0],
     )
-    expect((vnode.children as VNode[])[1].el).toBe(
+    expect((vnode.props!.children as VNode[])[1].el).toBe(
       container.firstChild!.childNodes[1],
     )
 
@@ -217,9 +214,9 @@ describe('SSR hydration', () => {
     )
 
     // start fragment 1
-    const fragment1 = (vnode.children as VNode[])[0]
+    const fragment1 = (vnode.props!.children as VNode[])[0]
     expect(fragment1.el).toBe(vnode.el.childNodes[0])
-    const fragment1Children = fragment1.children as VNode[]
+    const fragment1Children = fragment1.props!.children as VNode[]
 
     // first <span>
     expect(fragment1Children[0].el!.tagName).toBe('SPAN')
@@ -228,7 +225,7 @@ describe('SSR hydration', () => {
     // start fragment 2
     const fragment2 = fragment1Children[1]
     expect(fragment2.el).toBe(vnode.el.childNodes[2])
-    const fragment2Children = fragment2.children as VNode[]
+    const fragment2Children = fragment2.props!.children as VNode[]
 
     // second <span>
     expect(fragment2Children[0].el!.tagName).toBe('SPAN')
@@ -668,7 +665,7 @@ describe('SSR hydration', () => {
         new Promise(r => {
           r(
             defineComponent({
-              setup(_, { slots }) {
+              setup(props: any) {
                 const show = ref(false)
                 onMounted(() => {
                   nextTick(() => {
@@ -676,10 +673,9 @@ describe('SSR hydration', () => {
                   })
                 })
                 return () =>
-                  withDirectives(
-                    h('div', null, [renderSlot(slots, 'default')]),
-                    [[vShow, show.value]],
-                  )
+                  withDirectives(h('div', null, props.children()), [
+                    [vShow, show.value],
+                  ])
               },
             }) as any,
           )
@@ -691,7 +687,7 @@ describe('SSR hydration', () => {
         r(
           defineComponent({
             render(this: any) {
-              return renderSlot(this.$slots, 'default')
+              return this.$props.children()
             },
           }) as any,
         )
@@ -712,15 +708,9 @@ describe('SSR hydration', () => {
 
     const App = {
       render() {
-        return h(Toggle, null, {
-          default: () =>
-            h(Wrapper, null, {
-              default: () =>
-                h(Wrapper, null, {
-                  default: () => h(Child),
-                }),
-            }),
-        })
+        return h(Toggle, null, () =>
+          h(Wrapper, null, () => h(Wrapper, null, () => h(Child))),
+        )
       },
     }
 
@@ -799,13 +789,14 @@ describe('SSR hydration', () => {
     expect((container.firstChild! as any).indeterminate).toBe(true)
   })
 
-  test('force hydrate input v-model with non-string value bindings', () => {
+  test('force hydrate input with non-string value bindings', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" value="true">',
       () =>
-        withDirectives(
-          createVNode('input', { type: 'checkbox', 'true-value': true }, null),
-          [[vModelCheckbox, true]],
+        createVNode(
+          'input',
+          { type: 'checkbox', 'true-value': true, value: true },
+          null,
         ),
     )
     expect((container.firstChild as any)._trueValue).toBe(true)
@@ -873,9 +864,8 @@ describe('SSR hydration', () => {
   test('empty text node in slot', () => {
     const Comp = {
       render(this: any) {
-        return renderSlot(this.$slots, 'default', {}, () => [
-          createTextVNode(''),
-        ])
+        const children = this.$props.children
+        return children ? children() : [createTextVNode('')]
       },
     }
     const { container, vnode } = mountWithHydration('<!--[--><!--]-->', () =>
@@ -886,7 +876,7 @@ describe('SSR hydration', () => {
     expect(text.nodeType).toBe(3)
     expect(vnode.el).toBe(container.childNodes[0])
     // component => slot fragment => text node
-    expect((vnode as any).component?.subTree.children[0].el).toBe(text)
+    expect((vnode as any).component?.subTree.props?.children[0].el).toBe(text)
   })
 
   // #7215
@@ -976,7 +966,7 @@ describe('SSR hydration', () => {
       container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
       const Comp = {
         render(this: any) {
-          return createVNode('div', null, [renderSlot(this.$slots, 'default')])
+          return createVNode('div', null, this.$props.children())
         },
       }
       const show = ref(false)
@@ -989,19 +979,16 @@ describe('SSR hydration', () => {
             items.value = [1]
           })
           return () => {
-            return createVNode(Comp, null, {
-              default: withCtx(() => [
+            return createVNode(Comp, null, () => [
+              createElementVNode('div', null, [
                 createElementVNode('div', null, [
-                  createElementVNode('div', null, [
-                    clicked.value
-                      ? createVNode('div', { key: 0 }, 'foo')
-                      : createCommentVNode('v-if'),
-                  ]),
+                  clicked.value
+                    ? createVNode('div', { key: 0 }, 'foo')
+                    : createCommentVNode('v-if'),
                 ]),
-                createElementVNode('div', null, items.value.length),
               ]),
-              _: 1 /* STABLE */,
-            })
+              createElementVNode('div', null, items.value.length),
+            ])
           }
         },
       }

@@ -1,5 +1,4 @@
 import type { ComponentInternalInstance } from './component'
-import { devtoolsComponentUpdated } from './devtools'
 
 /**
  * mark the current rendering instance for asset resolution (e.g.
@@ -46,61 +45,4 @@ export function pushScopeId(id: string | null): void {
  */
 export function popScopeId(): void {
   currentScopeId = null
-}
-
-/**
- * Only for backwards compat
- * @private
- */
-export const withScopeId = (_id: string): typeof withCtx => withCtx
-
-export type ContextualRenderFn = {
-  (...args: any[]): any
-  _n: boolean /* already normalized */
-  _c: boolean /* compiled */
-  _d: boolean /* disableTracking */
-  _ns: boolean /* nonScoped */
-}
-
-/**
- * Wrap a slot function to memoize current rendering instance
- * @private compiler helper
- */
-export function withCtx(
-  fn: Function,
-  ctx: ComponentInternalInstance | null = currentRenderingInstance,
-  isNonScopedSlot?: boolean, // __COMPAT__ only
-): Function {
-  if (!ctx) return fn
-
-  // already normalized
-  if ((fn as ContextualRenderFn)._n) {
-    return fn
-  }
-
-  const renderFnWithContext: ContextualRenderFn = (...args: any[]) => {
-    const prevInstance = setCurrentRenderingInstance(ctx)
-    try {
-      return fn(...args)
-    } finally {
-      setCurrentRenderingInstance(prevInstance)
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        devtoolsComponentUpdated(ctx)
-      }
-    }
-  }
-
-  // mark normalized to avoid duplicated wrapping
-  renderFnWithContext._n = true
-  // mark this as compiled by default
-  // this is used in vnode.ts -> normalizeChildren() to set the slot
-  // rendering flag.
-  renderFnWithContext._c = true
-  // disable block tracking by default
-  renderFnWithContext._d = true
-  // compat build only flag to distinguish scoped slots from non-scoped ones
-  if (__COMPAT__ && isNonScopedSlot) {
-    renderFnWithContext._ns = true
-  }
-  return renderFnWithContext
 }

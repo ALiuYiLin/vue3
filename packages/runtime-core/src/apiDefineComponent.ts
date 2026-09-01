@@ -33,7 +33,7 @@ import type {
   ComponentPublicInstanceConstructor,
   CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
-import type { SlotsType } from './componentSlots'
+import type { SlotsType } from './component'
 import type { Directive } from './directives'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 
@@ -154,7 +154,7 @@ export function defineComponent<
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof NoInfer<Props>)[]
@@ -170,7 +170,7 @@ export function defineComponent<
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>

@@ -1965,13 +1965,13 @@ describe('api: watch', () => {
     render(
       h(
         {
-          setup(_, { slots }) {
+          setup(props: any) {
             onErrorCaptured(e => {
               errors.value.push(e.message)
               return false
             })
 
-            return () => h('div', slots.default && slots.default())
+            return () => h('div', props.children())
           },
         },
         null,

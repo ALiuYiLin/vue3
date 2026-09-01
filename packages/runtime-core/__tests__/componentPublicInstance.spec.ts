@@ -89,7 +89,6 @@ describe('component: proxy', () => {
     expect(instanceProxy.$data).toBe(instance!.data)
     expect(instanceProxy.$props).toBe(shallowReadonly(instance!.props))
     expect(instanceProxy.$attrs).toBe(shallowReadonly(instance!.attrs))
-    expect(instanceProxy.$slots).toBe(shallowReadonly(instance!.slots))
     expect(instanceProxy.$refs).toBe(shallowReadonly(instance!.refs))
     expect(instanceProxy.$parent).toBe(
       instance!.parent && instance!.parent.proxy,

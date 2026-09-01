@@ -5,7 +5,6 @@
 import {
   type ComponentInternalInstance,
   type FunctionalComponent,
-  type SetupContext,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -753,7 +752,7 @@ describe('component props', () => {
   // #3371
   test(`avoid double-setting props when casting`, async () => {
     const Parent = {
-      setup(props: any, { slots }: SetupContext) {
+      setup(props: any) {
         const childProps = ref()
         const registerChildProps = (props: any) => {
           childProps.value = props
@@ -763,7 +762,7 @@ describe('component props', () => {
         return () => {
           // access the child component's props
           childProps.value && childProps.value.foo
-          return slots.default!()
+          return props.children()
         }
       },
     }

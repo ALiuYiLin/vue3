@@ -481,14 +481,14 @@ describe('renderer: component', () => {
     const spy = vi.fn()
 
     const ClientOnly = {
-      setup(_: any, { slots }: SetupContext) {
+      setup(props: any) {
         const mounted = ref(false)
         onMounted(() => {
           mounted.value = true
         })
         return () => {
           if (mounted.value) {
-            return slots.default!()
+            return props.children()
           }
         }
       },
@@ -496,12 +496,10 @@ describe('renderer: component', () => {
 
     const App = {
       render() {
-        return h(ClientOnly, null, {
-          default: () => [
-            h('span', null, [text.value]),
-            h(Comp, { style: { width: '100%' } }),
-          ],
-        })
+        return h(ClientOnly, null, () => [
+          h('span', null, [text.value]),
+          h(Comp, { style: { width: '100%' } }),
+        ])
       },
     }
 

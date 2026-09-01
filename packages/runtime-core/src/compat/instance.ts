@@ -1,4 +1,5 @@
 import {
+  EMPTY_OBJ,
   NOOP,
   extend,
   looseEqual,
@@ -19,8 +20,6 @@ import {
 } from './compatConfig'
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
-import { shallowReadonly } from '@vue/reactivity'
-import { legacySlotProxyHandlers } from './componentFunctional'
 import { compatH } from './renderFn'
 import { createCommentVNode, createTextVNode } from '../vnode'
 import { renderList } from '../helpers/renderList'
@@ -36,7 +35,6 @@ import {
   legacyResolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import type { Slots } from '../componentSlots'
 import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
@@ -54,7 +52,7 @@ export interface LegacyPublicProperties {
   ): void
   $mount(el?: string | Element): this
   $destroy(): void
-  $scopedSlots: Slots
+  $scopedSlots: Record<string, any>
   $on(event: string | string[], fn: Function): this
   $once(event: string, fn: Function): this
   $off(event?: string | string[], fn?: Function): this
@@ -101,20 +99,15 @@ export function installCompatInstanceProperties(
     },
 
     // overrides existing accessor
-    $slots: i => {
-      if (
-        isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, i) &&
-        i.render &&
-        i.render._compatWrapped
-      ) {
-        return new Proxy(i.slots, legacySlotProxyHandlers)
-      }
-      return __DEV__ ? shallowReadonly(i.slots) : i.slots
+    $slots: () => {
+      // slots are removed in this fork
+      return EMPTY_OBJ
     },
 
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
-      return __DEV__ ? shallowReadonly(i.slots) : i.slots
+      // slots are removed in this fork
+      return EMPTY_OBJ
     },
 
     $on: i => on.bind(null, i),

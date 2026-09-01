@@ -14,16 +14,13 @@ import {
   onServerPrefetch,
   reactive,
   ref,
-  renderSlot,
   resolveComponent,
   resolveDynamicComponent,
   watchEffect,
-  withCtx,
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
 import { pipeToNodeWritable, renderToNodeStream } from '../src/renderToStream'
-import { type SSRSlot, ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 import { type Readable, Transform } from 'node:stream'
 import { ssrRenderVNode } from '../src'
@@ -397,226 +394,6 @@ function testRender(type: string, render: typeof renderToString) {
       })
     })
 
-    describe('slots', () => {
-      test('nested components with optimized slots', async () => {
-        const Child = {
-          props: ['msg'],
-          ssrRender(ctx: any, push: any, parent: any) {
-            push(`<div class="child">`)
-            ssrRenderSlot(
-              ctx.$slots,
-              'default',
-              { msg: 'from slot' },
-              () => {
-                push(`fallback`)
-              },
-              push,
-              parent,
-            )
-            push(`</div>`)
-          },
-        }
-
-        expect(
-          await render(
-            createApp({
-              ssrRender(_ctx, push, parent) {
-                push(`<div>parent`)
-                push(
-                  ssrRenderComponent(
-                    Child,
-                    { msg: 'hello' },
-                    {
-                      // optimized slot using string push
-                      default: (({ msg }, push, _p) => {
-                        push(`<span>${msg}</span>`)
-                      }) as SSRSlot,
-                      // important to avoid slots being normalized
-                      _: 1 as any,
-                    },
-                    parent,
-                  ),
-                )
-                push(`</div>`)
-              },
-            }),
-          ),
-        ).toBe(
-          `<div>parent<div class="child">` +
-            `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`,
-        )
-
-        // test fallback
-        expect(
-          await render(
-            createApp({
-              ssrRender(_ctx, push, parent) {
-                push(`<div>parent`)
-                push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
-                push(`</div>`)
-              },
-            }),
-          ),
-        ).toBe(
-          `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`,
-        )
-      })
-
-      test('nested components with vnode slots', async () => {
-        const Child = {
-          props: ['msg'],
-          ssrRender(ctx: any, push: any, parent: any) {
-            push(`<div class="child">`)
-            ssrRenderSlot(
-              ctx.$slots,
-              'default',
-              { msg: 'from slot' },
-              null,
-              push,
-              parent,
-            )
-            push(`</div>`)
-          },
-        }
-
-        expect(
-          await render(
-            createApp({
-              ssrRender(_ctx, push, parent) {
-                push(`<div>parent`)
-                push(
-                  ssrRenderComponent(
-                    Child,
-                    { msg: 'hello' },
-                    {
-                      // bailed slots returning raw vnodes
-                      default: ({ msg }: any) => {
-                        return h('span', msg)
-                      },
-                    },
-                    parent,
-                  ),
-                )
-                push(`</div>`)
-              },
-            }),
-          ),
-        ).toBe(
-          `<div>parent<div class="child">` +
-            `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`,
-        )
-      })
-
-      test('nested components with template slots', async () => {
-        const Child = {
-          props: ['msg'],
-          template: `<div class="child"><slot msg="from slot"></slot></div>`,
-        }
-
-        const app = createApp({
-          components: { Child },
-          template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`,
-        })
-
-        expect(await render(app)).toBe(
-          `<div>parent<div class="child">` +
-            `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`,
-        )
-      })
-
-      test('nested render fn components with template slots', async () => {
-        const Child = {
-          props: ['msg'],
-          render(this: any) {
-            return h(
-              'div',
-              {
-                class: 'child',
-              },
-              this.$slots.default({ msg: 'from slot' }),
-            )
-          },
-        }
-
-        const app = createApp({
-          template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`,
-        })
-        app.component('Child', Child)
-
-        expect(await render(app)).toBe(
-          `<div>parent<div class="child">` +
-            // no comment anchors because slot is used directly as element children
-            `<span>from slot</span>` +
-            `</div></div>`,
-        )
-      })
-
-      test('template slots forwarding', async () => {
-        const Child = {
-          template: `<div><slot/></div>`,
-        }
-
-        const Parent = {
-          components: { Child },
-          template: `<Child><slot/></Child>`,
-        }
-
-        const app = createApp({
-          components: { Parent },
-          template: `<Parent>hello</Parent>`,
-        })
-
-        expect(await render(app)).toBe(
-          `<div><!--[--><!--[-->hello<!--]--><!--]--></div>`,
-        )
-      })
-
-      test('template slots forwarding, empty slot', async () => {
-        const Child = {
-          template: `<div><slot/></div>`,
-        }
-
-        const Parent = {
-          components: { Child },
-          template: `<Child><slot/></Child>`,
-        }
-
-        const app = createApp({
-          components: { Parent },
-          template: `<Parent></Parent>`,
-        })
-
-        expect(await render(app)).toBe(
-          // should only have a single fragment
-          `<div><!--[--><!--]--></div>`,
-        )
-      })
-
-      test('template slots forwarding, empty slot w/ fallback', async () => {
-        const Child = {
-          template: `<div><slot>fallback</slot></div>`,
-        }
-
-        const Parent = {
-          components: { Child },
-          template: `<Child><slot/></Child>`,
-        }
-
-        const app = createApp({
-          components: { Parent },
-          template: `<Parent></Parent>`,
-        })
-
-        expect(await render(app)).toBe(
-          // should only have a single fragment
-          `<div><!--[-->fallback<!--]--></div>`,
-        )
-      })
-    })
-
     describe('vnode element', () => {
       test('props', async () => {
         expect(
@@ -733,30 +510,6 @@ function testRender(type: string, render: typeof renderToString) {
           },
         }
         expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
-      })
-
-      test('with client-compiled vnode slots', async () => {
-        const Child = {
-          __scopeId: 'data-v-child',
-          render: function (this: any) {
-            return h('div', null, [renderSlot(this.$slots, 'default')])
-          },
-        }
-
-        const Parent = {
-          __scopeId: 'data-v-test',
-          render: () => {
-            return h(Child, null, {
-              default: withCtx(() => [h('span', 'slot')]),
-            })
-          },
-        }
-
-        expect(await render(h(Parent))).toBe(
-          `<div data-v-child data-v-test>` +
-            `<!--[--><span data-v-test data-v-child-s>slot</span><!--]-->` +
-            `</div>`,
-        )
       })
     })
 

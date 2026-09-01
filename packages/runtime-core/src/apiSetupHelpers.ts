@@ -32,7 +32,6 @@ import type {
   PropOptions,
 } from './componentProps'
 import { warn } from './warning'
-import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
 
 // dev only
@@ -223,40 +222,11 @@ export function defineOptions<
      * expose should be defined via defineExpose().
      */
     expose?: never
-    /**
-     * slots should be defined via defineSlots().
-     */
-    slots?: never
   },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
   }
-}
-
-/**
- * Vue `<script setup>` compiler macro for providing type hints to IDEs for
- * slot name and slot props type checking.
- *
- * Example usage:
- * ```ts
- * const slots = defineSlots<{
- *   default(props: { msg: string }): any
- * }>()
- * ```
- *
- * This is only usable inside `<script setup>`, is compiled away in the
- * output and should **not** be actually called at runtime.
- *
- * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineslots}
- */
-export function defineSlots<
-  S extends Record<string, any> = Record<string, any>,
->(): StrictUnwrapSlotsType<SlotsType<S>> {
-  if (__DEV__) {
-    warnRuntimeUsage(`defineSlots`)
-  }
-  return null as any
 }
 
 export type ModelRef<T, M extends PropertyKey = string, G = T, S = T> = Ref<
@@ -410,10 +380,6 @@ export function withDefaults<
     warnRuntimeUsage(`withDefaults`)
   }
   return null as any
-}
-
-export function useSlots(): SetupContext['slots'] {
-  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {

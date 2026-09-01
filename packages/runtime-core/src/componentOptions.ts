@@ -78,7 +78,7 @@ import {
 } from './compat/compatConfig'
 import type { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
-import type { SlotsType } from './componentSlots'
+import type { SlotsType } from './component'
 import {
   type ComponentTypeEmits,
   normalizePropsOrEmits,
@@ -139,7 +139,7 @@ export interface ComponentOptionsBase<
           >
         >
     >,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node

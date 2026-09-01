@@ -3,16 +3,14 @@ import {
   extend,
   hyphenate,
   isArray,
+  isFunction,
   isObject,
   isReservedProp,
   normalizeClass,
 } from '@vue/shared'
 import type { ComponentInternalInstance, Data } from '../component'
-import type { Slot } from '../componentSlots'
-import { createSlots } from '../helpers/createSlots'
-import { renderSlot } from '../helpers/renderSlot'
 import { toHandlers } from '../helpers/toHandlers'
-import { type VNode, mergeProps } from '../vnode'
+import { Fragment, type VNode, createVNode, mergeProps } from '../vnode'
 
 function toObject(arr: Array<any>): Object {
   const res = {}
@@ -68,7 +66,7 @@ export function legacyBindObjectListeners(props: any, listeners: any): Data {
 
 export function legacyRenderSlot(
   instance: ComponentInternalInstance,
-  name: string,
+  _name: string,
   fallback?: VNode[],
   props?: any,
   bindObject?: any,
@@ -76,7 +74,14 @@ export function legacyRenderSlot(
   if (bindObject) {
     props = mergeProps(props, bindObject)
   }
-  return renderSlot(instance.slots, name, props, fallback && (() => fallback))
+  // slots are removed in this fork: render props.children (default slot)
+  const children = instance.vnode.props && instance.vnode.props.children
+  const content = isFunction(children) ? children() : children
+  return createVNode(
+    Fragment,
+    props || null,
+    (content as VNode[]) || fallback || [],
+  ) as VNode
 }
 
 type LegacyScopedSlotsData = Array<
@@ -89,15 +94,12 @@ type LegacyScopedSlotsData = Array<
 
 export function legacyResolveScopedSlots(
   fns: LegacyScopedSlotsData,
-  raw?: Record<string, Slot>,
+  raw?: Record<string, unknown>,
   // the following are added in 2.6
-  hasDynamicKeys?: boolean,
-): ReturnType<typeof createSlots> {
+  _hasDynamicKeys?: boolean,
+): any {
   // v2 default slot doesn't have name
-  return createSlots(
-    raw || ({ $stable: !hasDynamicKeys } as any),
-    mapKeyToName(fns),
-  )
+  return raw || mapKeyToName(fns)
 }
 
 function mapKeyToName(slots: LegacyScopedSlotsData) {

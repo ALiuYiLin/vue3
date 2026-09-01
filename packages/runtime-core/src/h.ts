@@ -9,7 +9,6 @@ import {
   isVNode,
 } from './vnode'
 import { type IfAny, isArray, isObject } from '@vue/shared'
-import type { RawSlots } from './componentSlots'
 import type {
   Component,
   ComponentOptions,
@@ -37,17 +36,13 @@ h('div', {})
 h('div', []) // array
 h('div', 'foo') // text
 h('div', h('br')) // vnode
-h(Component, () => {}) // default slot
+h(Component, () => {}) // function children
 
 // type + props + children
 h('div', {}, []) // array
 h('div', {}, 'foo') // text
 h('div', {}, h('br')) // vnode
-h(Component, {}, () => {}) // default slot
-h(Component, {}, {}) // named slots
-
-// named slots without props requires explicit `null` to avoid ambiguity
-h(Component, null, {})
+h(Component, {}, () => {}) // function children
 **/
 
 type RawProps = VNodeProps & {
@@ -90,7 +85,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
 export function h<K extends keyof HTMLElementTagNameMap>(
   type: K,
   props?: (RawProps & HTMLElementEventHandler) | null,
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // custom element
@@ -98,7 +93,7 @@ export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
   props?: RawProps | null,
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // text/comment
@@ -127,7 +122,7 @@ export function h<
 >(
   type: FunctionalComponent<P, any, S, any>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | IfAny<S, RawSlots, S>,
+  children?: RawChildren | IfAny<S, RawChildren, S>,
 ): VNode
 
 // catch-all for generic component types
@@ -148,14 +143,14 @@ export function h<P>(
 export function h<P>(
   type: Component<P>,
   props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // exclude `defineComponent` constructors
 export function h<P>(
   type: ComponentOptions<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // fake constructor type returned by `defineComponent` or class component
@@ -163,7 +158,7 @@ export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // fake constructor type returned by `defineComponent`
@@ -171,7 +166,7 @@ export function h(type: DefineComponent, children?: RawChildren): VNode
 export function h<P>(
   type: DefineComponent<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // catch all types
@@ -179,7 +174,7 @@ export function h(type: string | Component, children?: RawChildren): VNode
 export function h<P>(
   type: string | Component<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | RawChildren,
 ): VNode
 
 // Actual implementation

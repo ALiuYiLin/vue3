@@ -36,7 +36,6 @@ export default defineConfig({
         [
           Jsx,
           {
-            optimize: true,
             isCustomElement: (tag: string) => tag.startsWith('x-'),
           },
         ],

@@ -159,14 +159,14 @@ export function createHydrationFunctions(
         if (domType !== DOMNodeTypes.TEXT) {
           // #5728 empty text node inside a slot can cause hydration failure
           // because the server rendered HTML won't contain a text node
-          if (vnode.children === '') {
+          if (vnode.props && vnode.props.children === '') {
             insert((vnode.el = createText('')), parentNode(node)!, node)
             nextNode = node
           } else {
             nextNode = onMismatch()
           }
         } else {
-          if ((node as Text).data !== vnode.children) {
+          if ((node as Text).data !== (vnode.props && vnode.props.children)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text mismatch in`,
@@ -174,10 +174,13 @@ export function createHydrationFunctions(
                 `\n  - rendered on server: ${JSON.stringify(
                   (node as Text).data,
                 )}` +
-                  `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
+                  `\n  - expected on client: ${JSON.stringify(
+                    vnode.props && vnode.props.children,
+                  )}`,
               )
             logMismatchError()
-            ;(node as Text).data = vnode.children as string
+            ;(node as Text).data = (vnode.props &&
+              vnode.props.children) as string
           }
           nextNode = nextSibling(node)
         }
@@ -209,10 +212,12 @@ export function createHydrationFunctions(
           nextNode = node
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
-          const needToAdoptContent = !(vnode.children as string).length
+          const needToAdoptContent = !(
+            (vnode.props && vnode.props.children) as string
+          ).length
           for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
-              vnode.children +=
+              vnode.props!.children +=
                 nextNode.nodeType === DOMNodeTypes.ELEMENT
                   ? (nextNode as Element).outerHTML
                   : (nextNode as Text).data
@@ -398,7 +403,7 @@ export function createHydrationFunctions(
         // #11873 the HTML parser will "eat" the first newline when parsing
         // <pre> and <textarea>, so if the client value starts with a newline,
         // we need to remove it before comparing
-        let clientText = vnode.children as string
+        let clientText = (vnode.props && vnode.props.children) as string
         if (
           clientText[0] === '\n' &&
           (el.tagName === 'PRE' || el.tagName === 'TEXTAREA')
@@ -421,7 +426,7 @@ export function createHydrationFunctions(
               )
             logMismatchError()
           }
-          el.textContent = vnode.children as string
+          el.textContent = (vnode.props && vnode.props.children) as string
         }
       }
 
@@ -429,6 +434,8 @@ export function createHydrationFunctions(
       if (props) {
         const isCustomElement = el.tagName.includes('-')
         for (const key in props) {
+          // skip children: patched via hydrateChildren above
+          if (key === 'children') continue
           // check hydration mismatch
           if (
             (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -484,7 +491,8 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
   ): Node | null => {
-    const children = parentVNode.children as VNode[]
+    const children = (parentVNode.props &&
+      parentVNode.props.children) as VNode[]
     const l = children.length
     let hasCheckedMismatch = false
     for (let i = 0; i < l; i++) {
@@ -501,12 +509,15 @@ export function createHydrationFunctions(
             // adopt
             insert(
               createText(
-                (node as Text).data.slice((vnode.children as string).length),
+                (node as Text).data.slice(
+                  ((vnode.props && vnode.props.children) as string).length,
+                ),
               ),
               container,
               nextSibling(node),
             )
-            ;(node as Text).data = vnode.children as string
+            ;(node as Text).data = (vnode.props &&
+              vnode.props.children) as string
           }
         }
         node = hydrateNode(
@@ -516,7 +527,7 @@ export function createHydrationFunctions(
           parentSuspense,
           slotScopeIds,
         )
-      } else if (isText && !vnode.children) {
+      } else if (isText && !(vnode.props && vnode.props.children)) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)
@@ -858,7 +869,7 @@ function resolveCssVars(
     (vnode === root ||
       (root &&
         root.type === Fragment &&
-        (root.children as VNode[]).includes(vnode)))
+        ((root.props && root.props.children) as VNode[]).includes(vnode)))
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {

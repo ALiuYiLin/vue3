@@ -1,16 +1,78 @@
-import { mount, shallowMount, type VueWrapper } from '@vue/test-utils'
 import { describe, expect, test } from 'vitest'
-import {
-  defineComponent,
-  reactive,
-  ref,
-  type ComponentPublicInstance,
-  type CSSProperties,
-} from 'vue'
+import { type CSSProperties, createApp, defineComponent, nextTick } from 'vue'
+
+type Wrapper = {
+  root: HTMLElement
+  app: ReturnType<typeof createApp>
+  vm: any
+  subTree: () => any
+  html: () => string
+  text: () => string
+  get: (selector: string) => Element
+  classes: (selector?: string) => string[]
+  attributes: (selector?: string) => Record<string, string>
+  trigger: (selector: string, event?: string) => Promise<void>
+}
+
+// Mount with the fork's own runtime (no @vue/test-utils: it bundles an
+// upstream Vue that cannot render our children-in-props vnodes).
+const mounted: { app: ReturnType<typeof createApp>; root: HTMLElement }[] = []
+function mount(component: any): Wrapper {
+  // tear down the previous app so the document never holds duplicate ids
+  // (jsdom's id cache breaks querySelector when ids are duplicated)
+  for (const m of mounted) {
+    m.app.unmount()
+    m.root.remove()
+  }
+  mounted.length = 0
+  const root = document.createElement('div')
+  document.body.appendChild(root)
+  const app = createApp(component)
+  app.mount(root)
+  mounted.push({ app, root })
+  const instance = app._instance!
+  return {
+    root,
+    app,
+    vm: instance.proxy!,
+    subTree: () => instance.subTree,
+    html: () => root.innerHTML,
+    text: () => root.textContent!,
+    get(selector: string) {
+      const el = root.querySelector(selector)
+      if (!el)
+        throw new Error(
+          `no element matching ${selector}; root.innerHTML=${root.innerHTML}`,
+        )
+      return el
+    },
+    classes(selector?: string) {
+      const el = selector
+        ? root.querySelector(selector)!
+        : root.firstElementChild!
+      return Array.from(el.classList)
+    },
+    attributes(selector?: string) {
+      const el = selector
+        ? root.querySelector(selector)!
+        : root.firstElementChild!
+      const attrs: Record<string, string> = {}
+      for (const attr of Array.from(el.attributes)) {
+        attrs[attr.name] = attr.value
+      }
+      return attrs
+    },
+    async trigger(selector: string, event = 'click') {
+      const el = root.querySelector(selector)!
+      el.dispatchEvent(new MouseEvent(event, { bubbles: true }))
+      await nextTick()
+    },
+  }
+}
 
 describe('Transform JSX', () => {
   test('should render with render function', () => {
-    const wrapper = shallowMount({
+    const wrapper = mount({
       render() {
         return <div>123</div>
       },
@@ -19,7 +81,7 @@ describe('Transform JSX', () => {
   })
 
   test('should render with setup', () => {
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <div>123</div>
       },
@@ -28,17 +90,17 @@ describe('Transform JSX', () => {
   })
 
   test('Extracts attrs', () => {
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <div id="hi" />
       },
     })
-    expect(wrapper.element.id).toBe('hi')
+    expect(wrapper.attributes()['id']).toBe('hi')
   })
 
   test('Binds attrs', () => {
     const id = 'foo'
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <div>{id}</div>
       },
@@ -52,7 +114,7 @@ describe('Transform JSX', () => {
         foo: Number,
       },
       setup(props) {
-        return () => <div>{props.foo}</div>
+        return () => <div class="child">{props.foo}</div>
       },
     })
 
@@ -63,7 +125,7 @@ describe('Transform JSX', () => {
         return <Child class="parent" foo={1} />
       },
     })
-    expect(wrapper.classes()).toStrictEqual([])
+    expect(wrapper.classes()).toStrictEqual(['child'])
     expect(wrapper.text()).toBe('1')
   })
 
@@ -83,7 +145,7 @@ describe('Transform JSX', () => {
       },
     })
 
-    expect(wrapper.html()).toBe('<div>123</div>\n<div>456</div>')
+    expect(wrapper.html()).toBe('<div>123</div><div>456</div>')
   })
 
   test('nested component', () => {
@@ -103,7 +165,7 @@ describe('Transform JSX', () => {
   })
 
   test('xlink:href', () => {
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <use xlinkHref={'#name'}></use>
       },
@@ -112,7 +174,7 @@ describe('Transform JSX', () => {
   })
 
   test('Merge class', () => {
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         // @ts-expect-error
         return () => <div class="a" {...{ class: 'b' }} />
@@ -134,7 +196,7 @@ describe('Transform JSX', () => {
         height: '300px',
       } satisfies CSSProperties,
     }
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         // @ts-ignore
         return () => <div {...propsA} {...propsB} />
@@ -147,7 +209,7 @@ describe('Transform JSX', () => {
 
   test('JSXSpreadChild', () => {
     const a = ['1', '2']
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <div>{[...a]}</div>
       },
@@ -157,7 +219,7 @@ describe('Transform JSX', () => {
 
   test('domProps input[value]', () => {
     const val = 'foo'
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <input type="text" value={val} />
       },
@@ -167,41 +229,41 @@ describe('Transform JSX', () => {
 
   test('domProps input[checked]', () => {
     const val = true
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <input checked={val} />
       },
     })
 
-    expect(wrapper.vm.$.subTree?.props?.checked).toBe(val)
+    expect(wrapper.subTree()?.props?.checked).toBe(val)
   })
 
   test('domProps option[selected]', () => {
     const val = true
-    const wrapper = shallowMount({
+    const wrapper = mount({
       render() {
         return <option selected={val} />
       },
     })
-    expect(wrapper.vm.$.subTree?.props?.selected).toBe(val)
+    expect(wrapper.subTree()?.props?.selected).toBe(val)
   })
 
   test('domProps video[muted]', () => {
     const val = true
-    const wrapper = shallowMount({
+    const wrapper = mount({
       render() {
         return <video muted={val} />
       },
     })
 
-    expect(wrapper.vm.$.subTree?.props?.muted).toBe(val)
+    expect(wrapper.subTree()?.props?.muted).toBe(val)
   })
 
   test('Spread (single object expression)', () => {
     const props = {
       id: '1',
     }
-    const wrapper = shallowMount({
+    const wrapper = mount({
       render() {
         return <div {...props}>123</div>
       },
@@ -220,7 +282,7 @@ describe('Transform JSX', () => {
       class: ['a', 'b'],
     }
 
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => (
           <button
@@ -228,24 +290,25 @@ describe('Transform JSX', () => {
             {...data}
             class={{ c: true }}
             onClick={() => calls.push(4)}
-            hook-insert={() => calls.push(2)}
           />
         )
       },
     })
 
-    expect(wrapper.attributes('id')).toBe('hehe')
-    expect(wrapper.attributes('type')).toBe('button')
+    expect(wrapper.attributes('button')['id']).toBe('hehe')
+    expect(wrapper.attributes('button')['type']).toBe('button')
     expect(wrapper.text()).toBe('2')
-    expect(wrapper.classes()).toEqual(expect.arrayContaining(['a', 'b', 'c']))
+    expect(wrapper.classes('button')).toEqual(
+      expect.arrayContaining(['a', 'b', 'c']),
+    )
 
-    await wrapper.trigger('click')
+    await wrapper.trigger('button')
 
     expect(calls).toEqual(expect.arrayContaining([3, 4]))
   })
 
   test('empty string', () => {
-    const wrapper = shallowMount({
+    const wrapper = mount({
       setup() {
         return () => <h1 title=""></h1>
       },
@@ -254,82 +317,14 @@ describe('Transform JSX', () => {
   })
 })
 
-describe('directive', () => {
-  test('vHtml', () => {
-    const wrapper = shallowMount({
-      setup() {
-        const html = '<div>foo</div>'
-        return () => <h1 v-html={html}></h1>
-      },
-    })
-    expect(wrapper.html()).toBe('<h1>\n  <div>foo</div>\n</h1>')
-  })
-
-  test('vText', () => {
-    const text = 'foo'
-    const wrapper = shallowMount({
-      setup() {
-        return () => <div v-text={text}></div>
-      },
-    })
-    expect(wrapper.html()).toBe('<div>foo</div>')
-  })
-})
-
-describe('slots', () => {
-  test('with default', () => {
-    const A = defineComponent({
-      setup(_, { slots }) {
-        return () => (
-          <div>
-            {slots.default?.()}
-            {slots.foo?.('val')}
-          </div>
-        )
-      },
-    })
-
-    A.inheritAttrs = false
-
-    const wrapper = mount({
-      setup() {
-        return () => (
-          <A v-slots={{ foo: (val: string) => val }}>
-            <span>default</span>
-          </A>
-        )
-      },
-    })
-
-    expect(wrapper.html()).toBe('<div><span>default</span>val</div>')
-  })
-
-  test('without default', () => {
-    const A = defineComponent({
-      setup(_, { slots }) {
-        return () => <div>{slots.foo?.('foo')}</div>
-      },
-    })
-
-    A.inheritAttrs = false
-
-    const wrapper = mount({
-      setup() {
-        return () => <A v-slots={{ foo: (val: string) => val }} />
-      },
-    })
-
-    expect(wrapper.html()).toBe('<div>foo</div>')
-  })
-})
-
 describe('variables outside slots', () => {
   const A = defineComponent({
     props: {
       inc: Function,
+      children: null,
     },
     render() {
-      return this.$slots.default?.()
+      return this.$props.children
     },
   })
 
@@ -366,9 +361,9 @@ describe('variables outside slots', () => {
       }),
     )
 
-    expect(wrapper.get('#textarea').element.innerHTML).toBe('0')
-    await wrapper.get('#button').trigger('click')
-    expect(wrapper.get('#textarea').element.innerHTML).toBe('1')
+    expect(wrapper.get('#textarea').innerHTML).toBe('0')
+    await wrapper.trigger('#button')
+    expect(wrapper.get('#textarea').innerHTML).toBe('1')
   })
 
   test('forwarded', async () => {
@@ -401,9 +396,9 @@ describe('variables outside slots', () => {
       }),
     )
 
-    expect(wrapper.get('#textarea').element.innerHTML).toBe('0')
-    await wrapper.get('#button').trigger('click')
-    expect(wrapper.get('#textarea').element.innerHTML).toBe('1')
+    expect(wrapper.get('#textarea').innerHTML).toBe('0')
+    await wrapper.trigger('#button')
+    expect(wrapper.get('#textarea').innerHTML).toBe('1')
   })
 })
 
@@ -411,8 +406,8 @@ test('reassign variable as component should work', () => {
   let a: any = 1
 
   const A = defineComponent({
-    setup(_, { slots }) {
-      return () => <span>{slots.default!()}</span>
+    setup(props: any) {
+      return () => <span>{props.children}</span>
     },
   })
 
@@ -429,48 +424,11 @@ test('reassign variable as component should work', () => {
   expect(wrapper.html()).toBe('<span>2</span>')
 })
 
-describe('should support passing object slots via JSX children', () => {
+describe('should support passing children via JSX', () => {
   const A = defineComponent({
-    setup(_, { slots }) {
-      return () => (
-        <span>
-          {slots.default?.()}
-          {slots.foo?.()}
-        </span>
-      )
+    setup(props: any) {
+      return () => <span>{props.children}</span>
     },
-  })
-
-  test('single expression, variable', () => {
-    const slots = { default: () => 1, foo: () => 2 }
-
-    const wrapper = mount({
-      render() {
-        return <A>{slots}</A>
-      },
-    })
-
-    expect(wrapper.html()).toBe('<span>12</span>')
-  })
-
-  test('single expression, object literal', () => {
-    const wrapper = mount({
-      render() {
-        return <A>{{ default: () => 1, foo: () => 2 }}</A>
-      },
-    })
-
-    expect(wrapper.html()).toBe('<span>12</span>')
-  })
-
-  test('single expression, object literal', () => {
-    const wrapper = mount({
-      render() {
-        return <A>{{ default: () => 1, foo: () => 2 }}</A>
-      },
-    })
-
-    expect(wrapper.html()).toBe('<span>12</span>')
   })
 
   test('single expression, non-literal value', () => {
@@ -482,7 +440,7 @@ describe('should support passing object slots via JSX children', () => {
       },
     })
 
-    expect(wrapper.html()).toBe('<span>1<!----></span>')
+    expect(wrapper.html()).toBe('<span>1</span>')
   })
 
   test('single expression, function expression', () => {
@@ -492,7 +450,7 @@ describe('should support passing object slots via JSX children', () => {
       },
     })
 
-    expect(wrapper.html()).toBe('<span>foo<!----></span>')
+    expect(wrapper.html()).toBe('<span>foo</span>')
   })
 
   test('single expression, function expression variable', () => {
@@ -504,7 +462,7 @@ describe('should support passing object slots via JSX children', () => {
       },
     })
 
-    expect(wrapper.html()).toBe('<span>foo<!----></span>')
+    expect(wrapper.html()).toBe('<span>foo</span>')
   })
 
   test('single expression, array map expression', () => {
@@ -525,18 +483,11 @@ describe('should support passing object slots via JSX children', () => {
     })
 
     expect(wrapper.html()).toMatchInlineSnapshot(
-      `
-      "<span><span>A</span>
-      <!----></span>
-      <span><span>B</span>
-      <!----></span>
-      <span><span>C</span>
-      <!----></span>"
-    `,
+      `"<span><span>A</span></span><span><span>B</span></span><span><span>C</span></span>"`,
     )
   })
 
-  test('xx', () => {
+  test('function expression returning vnode', () => {
     const data = ['A', 'B', 'C']
 
     const wrapper = mount({
@@ -552,14 +503,7 @@ describe('should support passing object slots via JSX children', () => {
     })
 
     expect(wrapper.html()).toMatchInlineSnapshot(
-      `
-      "<span><span>A</span>
-      <!----></span>
-      <span><span>B</span>
-      <!----></span>
-      <span><span>C</span>
-      <!----></span>"
-    `,
+      `"<span><span>A</span></span><span><span>B</span></span><span><span>C</span></span>"`,
     )
   })
 })

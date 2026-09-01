@@ -20,7 +20,7 @@ function walk(vnode: VNode, children: ComponentPublicInstance[]) {
   if (vnode.component) {
     children.push(vnode.component.proxy!)
   } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    const vnodes = vnode.children as VNode[]
+    const vnodes = (vnode.props && vnode.props.children) as VNode[]
     for (let i = 0; i < vnodes.length; i++) {
       walk(vnodes[i], children)
     }

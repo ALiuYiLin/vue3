@@ -98,7 +98,7 @@ describe('useCssVars', () => {
     const value = ref(true)
     const root = document.createElement('div')
 
-    const Child: FunctionalComponent = (_, { slots }) => slots.default!()
+    const Child: FunctionalComponent = (props: any) => props.children()
 
     const App = {
       setup() {

@@ -22,7 +22,6 @@ import {
   looseEqual,
 } from '@vue/shared'
 import { warn } from './warning'
-import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
 import { setCurrentRenderingInstance } from './componentRenderContext'
@@ -53,7 +52,6 @@ export function renderComponentRoot(
     proxy,
     withProxy,
     propsOptions: [propsOptions],
-    slots,
     attrs,
     emit,
     render,
@@ -121,10 +119,9 @@ export function renderComponentRoot(
                       markAttrsAccessed()
                       return shallowReadonly(attrs)
                     },
-                    slots,
                     emit,
                   }
-                : { attrs, slots, emit },
+                : { attrs, emit },
             )
           : render(
               __DEV__ ? shallowReadonly(props) : props,
@@ -253,7 +250,10 @@ export function filterSingleRoot(
     const child = children[i]
     if (isVNode(child)) {
       // ignore user comment
-      if (child.type !== Comment || child.children === 'v-if') {
+      if (
+        child.type !== Comment ||
+        (child.props && child.props.children === 'v-if')
+      ) {
         if (singleRoot) {
           // has more than 1 non-comment child, return now
           return
@@ -299,14 +299,13 @@ export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode,
 ): boolean {
-  const { props: prevProps, children: prevChildren, component } = prevVNode
-  const { props: nextProps, children: nextChildren } = nextVNode
+  const prevProps = prevVNode.props
+  const nextProps = nextVNode.props
+  const { component } = prevVNode
   const emits = component!.emitsOptions
 
-  // Parent component's render function was hot-updated. Since this may have
-  // caused the child component's slots content to have changed, we need to
-  // force the child to update as well.
-  if (__DEV__ && (prevChildren || nextChildren) && isHmrUpdating) {
+  // children are part of props now: any children change forces an update
+  if ((prevProps && prevProps.children) !== (nextProps && nextProps.children)) {
     return true
   }
 
@@ -315,13 +314,6 @@ export function shouldUpdateComponent(
     return true
   }
 
-  // this path is only taken by manually written render functions
-  // so presence of any children leads to a forced update
-  if (prevChildren || nextChildren) {
-    if (!nextChildren || !(nextChildren as any).$stable) {
-      return true
-    }
-  }
   if (prevProps === nextProps) {
     return false
   }

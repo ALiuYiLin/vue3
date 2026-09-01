@@ -1,4 +1,3 @@
-import { ShapeFlags } from '@vue/shared'
 import Vue from '@vue/compat'
 import { createComponentInstance } from '../../runtime-core/src/component'
 import { setCurrentRenderingInstance } from '../../runtime-core/src/componentRenderContext'
@@ -179,40 +178,6 @@ describe('compat: render function', () => {
         },
       ] as DirectiveBinding[],
     })
-  })
-
-  test('scopedSlots', () => {
-    const scopedSlots = {
-      default() {},
-    }
-    const vnode = h(mockComponent, {
-      scopedSlots,
-    })
-    expect(vnode).toMatchObject({
-      children: scopedSlots,
-    })
-    expect('scopedSlots' in vnode.props!).toBe(false)
-    expect(vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN).toBeTruthy()
-  })
-
-  test('legacy named slot', () => {
-    const vnode = h(mockComponent, [
-      'text',
-      h('div', { slot: 'foo' }, 'one'),
-      h('div', { slot: 'bar' }, 'two'),
-      h('div', { slot: 'foo' }, 'three'),
-      h('div', 'four'),
-    ])
-    expect(vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN).toBeTruthy()
-    const slots = vnode.children as any
-
-    // default
-    expect(slots.default()).toMatchObject(['text', { children: 'four' }])
-    expect(slots.foo()).toMatchObject([
-      { children: 'one' },
-      { children: 'three' },
-    ])
-    expect(slots.bar()).toMatchObject([{ children: 'two' }])
   })
 
   test('in component usage', () => {

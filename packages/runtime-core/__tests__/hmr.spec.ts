@@ -586,25 +586,15 @@ describe('hot module replacement', () => {
     const parentId = 'parent-nested-rerender'
     const Parent: ComponentOptions = {
       __hmrId: parentId,
-      render() {
-        return h(Foo, null, {
-          default: () => this.$slots.default(),
-          _: 3 /* FORWARDED */,
-        })
+      render(this: any) {
+        return h(Foo, null, () => this.$props.children())
       },
     }
 
     const appId = 'app-nested-rerender'
     const App: ComponentOptions = {
       __hmrId: appId,
-      render: () =>
-        h(Parent, null, {
-          default: () => [
-            h(Foo, null, {
-              default: () => ['foo'],
-            }),
-          ],
-        }),
+      render: () => h(Parent, null, () => [h(Foo, null, () => ['foo'])]),
     }
     createRecord(parentId, App)
 

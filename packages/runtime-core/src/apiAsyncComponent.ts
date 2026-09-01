@@ -265,8 +265,8 @@ function createInnerComp(
   comp: ConcreteComponent,
   parent: ComponentInternalInstance,
 ) {
-  const { ref, props, children, ce } = parent.vnode
-  const vnode = createVNode(comp, props, children)
+  const { ref, props, ce } = parent.vnode
+  const vnode = createVNode(comp, props, props && props.children)
   // ensure inner component inherits the async wrapper's ref owner
   vnode.ref = ref
   // pass the custom element callback on to the inner comp
