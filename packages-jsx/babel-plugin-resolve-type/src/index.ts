@@ -1,0 +1,336 @@
+import { codeFrameColumns } from '@babel/code-frame'
+import { addNamed } from '@babel/helper-module-imports'
+import { declare } from '@babel/helper-plugin-utils'
+import { parseExpression } from '@babel/parser'
+import {
+  extractRuntimeEmits,
+  extractRuntimeProps,
+  type SimpleTypeResolveContext,
+  type SimpleTypeResolveOptions,
+} from '@vue/compiler-sfc'
+import type {
+  NodePath,
+  PluginAPI,
+  PluginObject,
+  PluginPass,
+  types as t,
+} from '@babel/core'
+
+export type { SimpleTypeResolveOptions as Options }
+
+const plugin: (
+  api: PluginAPI,
+  options: SimpleTypeResolveOptions,
+  dirname: string,
+) => PluginObject<PluginPass> = declare<object, SimpleTypeResolveOptions>(
+  ({ types: t }, options) => {
+    let ctx: SimpleTypeResolveContext | undefined
+    let helpers: Set<string> | undefined
+
+    return {
+      name: 'babel-plugin-resolve-type',
+      pre(file) {
+        const filename = file.opts.filename || 'unknown.js'
+        helpers = new Set()
+        ctx = {
+          filename,
+          source: file.code,
+          options,
+          ast: file.ast.program.body,
+          isCE: false,
+          warn(msg, node) {
+            console.warn(
+              `[@vue/babel-plugin-resolve-type] ${msg}\n\n${filename}\n${codeFrameColumns(
+                file.code,
+                {
+                  start: {
+                    line: node.loc!.start.line,
+                    column: node.loc!.start.column + 1,
+                  },
+                  end: {
+                    line: node.loc!.end.line,
+                    column: node.loc!.end.column + 1,
+                  },
+                },
+              )}`,
+            )
+          },
+          error(msg, node) {
+            throw new Error(
+              `[@vue/babel-plugin-resolve-type] ${msg}\n\n${filename}\n${codeFrameColumns(
+                file.code,
+                {
+                  start: {
+                    line: node.loc!.start.line,
+                    column: node.loc!.start.column + 1,
+                  },
+                  end: {
+                    line: node.loc!.end.line,
+                    column: node.loc!.end.column + 1,
+                  },
+                },
+              )}`,
+            )
+          },
+          helper(key) {
+            helpers!.add(key)
+            return `_${key}`
+          },
+          getString(node) {
+            return file.code.slice(node.start!, node.end!)
+          },
+          propsTypeDecl: undefined,
+          propsRuntimeDefaults: undefined,
+          propsDestructuredBindings: {},
+          emitsTypeDecl: undefined,
+        }
+      },
+      visitor: {
+        CallExpression(path) {
+          if (!ctx) {
+            throw new Error(
+              '[@vue/babel-plugin-resolve-type] context is not loaded.',
+            )
+          }
+
+          const { node } = path
+
+          if (!t.isIdentifier(node.callee, { name: 'defineComponent' })) return
+          if (!checkDefineComponent(path)) return
+
+          const comp = node.arguments[0]
+          if (!comp || !t.isFunction(comp)) return
+
+          let options = node.arguments[1]
+          if (!options) {
+            options = t.objectExpression([])
+            node.arguments.push(options)
+          }
+
+          let propsGenerics: t.TSType | undefined
+          let emitsGenerics: t.TSType | undefined
+          if (node.typeArguments && node.typeArguments.params.length > 0) {
+            propsGenerics = node.typeArguments.params[0] as t.TSType
+            emitsGenerics = node.typeArguments.params[1] as t.TSType
+          }
+
+          node.arguments[1] =
+            processProps(comp, propsGenerics, options) || options
+          node.arguments[1] =
+            processEmits(comp, emitsGenerics, node.arguments[1]) || options
+        },
+        VariableDeclarator(path) {
+          inferComponentName(path)
+        },
+      },
+      post(file) {
+        for (const helper of helpers!) {
+          addNamed(file.path, `_${helper}`, 'vue')
+        }
+      },
+    }
+
+    function inferComponentName(path: NodePath<t.VariableDeclarator>) {
+      const id = path.get('id')
+      const init = path.get('init')
+      if (!id || !id.isIdentifier() || !init || !init.isCallExpression()) return
+
+      if (!init.get('callee')?.isIdentifier({ name: 'defineComponent' })) return
+      if (!checkDefineComponent(init)) return
+
+      const nameProperty = t.objectProperty(
+        t.identifier('name'),
+        t.stringLiteral(id.node.name),
+      )
+      const { arguments: args } = init.node
+      if (args.length === 0) return
+
+      if (args.length === 1) {
+        init.node.arguments.push(t.objectExpression([]))
+      }
+      args[1] = addProperty(args[1], nameProperty)
+    }
+
+    function processProps(
+      comp: t.Function,
+      generics: t.TSType | undefined,
+      options: t.ArgumentPlaceholder | t.SpreadElement | t.Expression,
+    ) {
+      const props = comp.params[0]
+      if (!props) return
+
+      if (props.type === 'AssignmentPattern') {
+        if (generics) {
+          ctx!.propsTypeDecl = resolveTypeReference(generics)
+        } else {
+          const typeAnnotation = getTypeAnnotation(props.left)
+          ctx!.propsTypeDecl =
+            typeAnnotation && t.isTSTypeReference(typeAnnotation)
+              ? resolveTypeReference(typeAnnotation) || typeAnnotation
+              : typeAnnotation
+        }
+        ctx!.propsRuntimeDefaults = props.right
+      } else if (generics) {
+        ctx!.propsTypeDecl = resolveTypeReference(generics)
+      } else {
+        const typeAnnotation = getTypeAnnotation(props)
+        ctx!.propsTypeDecl =
+          typeAnnotation && t.isTSTypeReference(typeAnnotation)
+            ? resolveTypeReference(typeAnnotation) || typeAnnotation
+            : typeAnnotation
+      }
+
+      if (!ctx!.propsTypeDecl) return
+
+      const runtimeProps = extractRuntimeProps(ctx!)
+      if (!runtimeProps) {
+        return
+      }
+
+      const ast = parseExpression(runtimeProps)
+      return addProperty(options, t.objectProperty(t.identifier('props'), ast))
+    }
+
+    function addProperty<T extends t.Node>(
+      object: T,
+      property: t.ObjectProperty,
+    ) {
+      if (t.isObjectExpression(object)) {
+        object.properties.unshift(property)
+      } else if (t.isExpression(object)) {
+        return t.objectExpression([property, t.spreadElement(object)])
+      }
+      return object
+    }
+
+    function processEmits(
+      comp: t.Function,
+      generics: t.TSType | undefined,
+      options: t.ArgumentPlaceholder | t.SpreadElement | t.Expression,
+    ) {
+      let emitType: t.Node | undefined
+      if (generics) {
+        emitType = resolveTypeReference(generics)
+      }
+
+      const setupCtx = comp.params[1] && getTypeAnnotation(comp.params[1])
+      if (
+        !emitType &&
+        setupCtx &&
+        t.isTSTypeReference(setupCtx) &&
+        t.isIdentifier(setupCtx.typeName, { name: 'SetupContext' })
+      ) {
+        emitType = setupCtx.typeArguments?.params[0]
+      }
+      if (!emitType) return
+
+      ctx!.emitsTypeDecl = emitType
+      const runtimeEmits = extractRuntimeEmits(ctx!)
+
+      const ast = t.arrayExpression(
+        Array.from(runtimeEmits, e => t.stringLiteral(e)),
+      )
+      return addProperty(options, t.objectProperty(t.identifier('emits'), ast))
+    }
+
+    function resolveTypeReference(typeNode: t.TSType) {
+      if (!ctx) return
+
+      if (t.isTSTypeReference(typeNode)) {
+        const typeName = getTypeReferenceName(typeNode)
+        if (typeName) {
+          const typeDeclaration = findTypeDeclaration(typeName)
+          if (typeDeclaration) {
+            return typeDeclaration
+          }
+        }
+      }
+
+      return
+    }
+
+    function getTypeReferenceName(typeRef: t.TSTypeReference) {
+      if (t.isIdentifier(typeRef.typeName)) {
+        return typeRef.typeName.name
+      } else if (t.isTSQualifiedName(typeRef.typeName)) {
+        const parts: string[] = []
+        let current: t.TSEntityName = typeRef.typeName
+
+        while (t.isTSQualifiedName(current)) {
+          if (t.isIdentifier(current.right)) {
+            parts.unshift(current.right.name)
+          }
+          current = current.left
+        }
+
+        if (t.isIdentifier(current)) {
+          parts.unshift(current.name)
+        }
+
+        return parts.join('.')
+      }
+      return null
+    }
+
+    function findTypeDeclaration(typeName: string) {
+      if (!ctx) return null
+
+      for (const statement of ctx.ast) {
+        if (
+          t.isTSInterfaceDeclaration(statement) &&
+          statement.id.name === typeName
+        ) {
+          return t.tsTypeLiteral(statement.body.body)
+        }
+
+        if (
+          t.isTSTypeAliasDeclaration(statement) &&
+          statement.id.name === typeName
+        ) {
+          return statement.typeAnnotation
+        }
+
+        if (t.isExportNamedDeclaration(statement) && statement.declaration) {
+          if (
+            t.isTSInterfaceDeclaration(statement.declaration) &&
+            statement.declaration.id.name === typeName
+          ) {
+            return t.tsTypeLiteral(statement.declaration.body.body)
+          }
+
+          if (
+            t.isTSTypeAliasDeclaration(statement.declaration) &&
+            statement.declaration.id.name === typeName
+          ) {
+            return statement.declaration.typeAnnotation
+          }
+        }
+      }
+
+      return null
+    }
+  },
+)
+export default plugin
+
+function getTypeAnnotation(node: t.Node) {
+  if (
+    'typeAnnotation' in node &&
+    node.typeAnnotation &&
+    node.typeAnnotation.type === 'TSTypeAnnotation'
+  ) {
+    return node.typeAnnotation.typeAnnotation
+  }
+}
+
+function checkDefineComponent(path: NodePath<t.CallExpression>) {
+  const defineCompImport = path.scope.getBinding('defineComponent')?.path.parent
+  if (!defineCompImport) return true
+
+  return (
+    defineCompImport.type === 'ImportDeclaration' &&
+    /^@?vue(?:\/|$)/.test(defineCompImport.source.value)
+  )
+}
+
+export { plugin as 'module.exports' }

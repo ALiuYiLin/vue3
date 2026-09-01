@@ -1,0 +1,52 @@
+{
+  "name": "@vue/babel-plugin-resolve-type",
+  "type": "module",
+  "version": "3.0.0",
+  "description": "Babel plugin for resolving Vue types.",
+  "author": "Kevin Deng <sxzz@sxzz.moe>",
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/sxzz",
+  "homepage": "https://github.com/vuejs/babel-plugin-jsx/tree/dev/packages/babel-plugin-resolve-type#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/babel-plugin-jsx.git",
+    "directory": "packages/babel-plugin-resolve-type"
+  },
+  "bugs": {
+    "url": "https://github.com/vuejs/babel-plugin-jsx/issues"
+  },
+  "exports": {
+    ".": {
+      "vue-jsx-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json"
+    }
+  },
+  "peerDependencies": {
+    "@babel/core": "^8.0.0"
+  },
+  "dependencies": {
+    "@babel/code-frame": "catalog:",
+    "@babel/helper-module-imports": "catalog:",
+    "@babel/helper-plugin-utils": "catalog:",
+    "@babel/parser": "^8.0.4",
+    "@vue/compiler-sfc": "catalog:"
+  },
+  "devDependencies": {
+    "@babel/core": "catalog:",
+    "@babel/plugin-syntax-jsx": "catalog:",
+    "vue": "catalog:"
+  }
+}

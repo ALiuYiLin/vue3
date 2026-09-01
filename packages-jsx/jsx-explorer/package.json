@@ -1,0 +1,23 @@
+{
+  "name": "@vue/jsx-explorer",
+  "type": "module",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@babel/standalone": "catalog:",
+    "@vue/babel-plugin-jsx": "workspace:*",
+    "assert": "catalog:",
+    "monaco-editor": "catalog:",
+    "vue": "catalog:"
+  },
+  "devDependencies": {
+    "@types/babel__standalone": "catalog:",
+    "@vitejs/plugin-vue-jsx": "catalog:",
+    "vite": "catalog:"
+  }
+}

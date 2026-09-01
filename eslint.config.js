@@ -180,6 +180,8 @@ export default defineConfig(
       '.idea/',
       'explorations/',
       'dts-build/packages',
+      // babel-plugin-jsx packages follow their own upstream lint setup
+      'packages-jsx/**',
     ],
   },
 )

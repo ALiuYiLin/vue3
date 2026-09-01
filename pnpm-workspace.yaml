@@ -1,9 +1,19 @@
 packages:
   - 'packages/*'
   - 'packages-private/*'
+  - 'packages-jsx/*'
 
 catalog:
+  '@babel/code-frame': ^8.0.0
+  '@babel/core': ^8.0.1
+  '@babel/helper-module-imports': ^8.0.0
+  '@babel/helper-plugin-utils': ^8.0.1
   '@babel/parser': ^7.29.7
+  '@babel/plugin-syntax-jsx': ^8.0.1
+  '@babel/plugin-syntax-typescript': ^8.0.3
+  '@babel/preset-env': ^8.0.2
+  '@babel/standalone': ^8.0.4
+  '@babel/template': ^8.0.0
   '@babel/types': ^7.29.7
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
@@ -11,6 +21,17 @@ catalog:
   'source-map-js': ^1.2.1
   'vite': ^8.1.0
   '@vitejs/plugin-vue': ^6.0.7
+  '@vitejs/plugin-vue-jsx': ^5.1.6
+  '@rolldown/plugin-babel': ^0.2.3
+  '@types/babel__standalone': ^7.1.9
+  '@vue/compiler-sfc': ^3.5.40
+  '@vue/shared': ^3.5.40
+  '@vue/test-utils': ^2.4.11
+  'assert': ^2.1.0
+  'monaco-editor': ^0.56.0
+  'regenerator-runtime': ^0.14.1
+  'tsdown': ^0.22.14
+  'vue': ^3.5.40
 
 allowBuilds:
   '@swc/core': true

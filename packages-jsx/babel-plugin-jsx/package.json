@@ -1,0 +1,61 @@
+{
+  "name": "@vue/babel-plugin-jsx",
+  "type": "module",
+  "version": "3.0.0",
+  "description": "Babel plugin for Vue 3 JSX",
+  "author": "Amour1688 <lcz_1996@foxmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/vuejs/babel-plugin-jsx/tree/dev/packages/babel-plugin-jsx#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/babel-plugin-jsx.git",
+    "directory": "packages/babel-plugin-jsx"
+  },
+  "bugs": {
+    "url": "https://github.com/vuejs/babel-plugin-jsx/issues"
+  },
+  "exports": {
+    ".": {
+      "vue-jsx-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json"
+    }
+  },
+  "peerDependencies": {
+    "@babel/core": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@babel/core": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@babel/helper-module-imports": "catalog:",
+    "@babel/helper-plugin-utils": "catalog:",
+    "@babel/plugin-syntax-jsx": "catalog:",
+    "@babel/template": "catalog:",
+    "@babel/types": "^8.0.4",
+    "@vue/babel-helper-vue-transform-on": "workspace:*",
+    "@vue/babel-plugin-resolve-type": "workspace:*",
+    "@vue/shared": "catalog:"
+  },
+  "devDependencies": {
+    "@babel/core": "catalog:",
+    "@babel/preset-env": "catalog:",
+    "@vue/test-utils": "catalog:",
+    "regenerator-runtime": "catalog:",
+    "vue": "catalog:"
+  }
+}

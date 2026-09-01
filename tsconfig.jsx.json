@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "lib": ["es2023", "DOM"],
+    "moduleDetection": "force",
+    "customConditions": ["vue-jsx-source"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedDeclarations": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@babel/types": [
+        "./packages-jsx/babel-plugin-jsx/node_modules/@babel/types"
+      ]
+    }
+  },
+  "include": ["packages-jsx/*/src", "packages-jsx/*/test"]
+}
