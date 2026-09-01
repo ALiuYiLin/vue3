@@ -8,9 +8,7 @@ import {
   Teleport,
   Transition,
   type VNode,
-  createBlock,
   createCommentVNode,
-  createElementBlock,
   createElementVNode,
   createSSRApp,
   createStaticVNode,
@@ -22,7 +20,6 @@ import {
   nextTick,
   onMounted,
   onServerPrefetch,
-  openBlock,
   reactive,
   ref,
   renderSlot,
@@ -34,7 +31,7 @@ import {
 } from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
-import { PatchFlags, normalizeStyle } from '@vue/shared'
+import { normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -1609,13 +1606,7 @@ describe('SSR hydration', () => {
       '<input type="checkbox" value="true">',
       () =>
         withDirectives(
-          createVNode(
-            'input',
-            { type: 'checkbox', 'true-value': true },
-            null,
-            PatchFlags.PROPS,
-            ['true-value'],
-          ),
+          createVNode('input', { type: 'checkbox', 'true-value': true }, null),
           [[vModelCheckbox, true]],
         ),
     )
@@ -1625,13 +1616,7 @@ describe('SSR hydration', () => {
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',
-      () =>
-        createVNode(
-          'input',
-          { type: 'checkbox', indeterminate: '' },
-          null,
-          PatchFlags.CACHED,
-        ),
+      () => createVNode('input', { type: 'checkbox', indeterminate: '' }, null),
     )
     expect((container.firstChild as any).indeterminate).toBe(true)
   })
@@ -1642,7 +1627,7 @@ describe('SSR hydration', () => {
       () =>
         h('select', [
           // hoisted because bound value is a constant...
-          createVNode('option', { value: true }, null, -1 /* HOISTED */),
+          createVNode('option', { value: true }, null),
         ]),
     )
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
@@ -1728,16 +1713,12 @@ describe('SSR hydration', () => {
       const style = reactive({ color: 'red' })
       const Comp = {
         render(this: any) {
-          return (
-            openBlock(),
-            createElementBlock(
-              'div',
-              {
-                style: normalizeStyle(style),
-              },
-              null,
-              4 /* STYLE */,
-            )
+          return createVNode(
+            'div',
+            {
+              style: normalizeStyle(style),
+            },
+            null,
           )
         },
       }
@@ -1981,12 +1962,7 @@ describe('SSR hydration', () => {
       container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
       const Comp = {
         render(this: any) {
-          return (
-            openBlock(),
-            createElementBlock('div', null, [
-              renderSlot(this.$slots, 'default'),
-            ])
-          )
+          return createVNode('div', null, [renderSlot(this.$slots, 'default')])
         },
       }
       const show = ref(false)
@@ -1999,28 +1975,19 @@ describe('SSR hydration', () => {
             items.value = [1]
           })
           return () => {
-            return (
-              openBlock(),
-              createBlock(Comp, null, {
-                default: withCtx(() => [
+            return createVNode(Comp, null, {
+              default: withCtx(() => [
+                createElementVNode('div', null, [
                   createElementVNode('div', null, [
-                    createElementVNode('div', null, [
-                      clicked.value
-                        ? (openBlock(),
-                          createElementBlock('div', { key: 0 }, 'foo'))
-                        : createCommentVNode('v-if', true),
-                    ]),
+                    clicked.value
+                      ? createVNode('div', { key: 0 }, 'foo')
+                      : createCommentVNode('v-if'),
                   ]),
-                  createElementVNode(
-                    'div',
-                    null,
-                    items.value.length,
-                    1 /* TEXT */,
-                  ),
                 ]),
-                _: 1 /* STABLE */,
-              })
-            )
+                createElementVNode('div', null, items.value.length),
+              ]),
+              _: 1 /* STABLE */,
+            })
           }
         },
       }
@@ -2649,7 +2616,7 @@ describe('SSR hydration', () => {
     test('comment mismatch (v-if branch removed)', () => {
       const { container } = mountWithHydration(
         `<div data-allow-mismatch=""><span>value</span></div>`,
-        () => createCommentVNode('v-if', true),
+        () => createCommentVNode('v-if'),
       )
       expect(container.innerHTML).toBe('<!--v-if-->')
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -2720,18 +2687,10 @@ describe('SSR hydration', () => {
       try {
         const { container } = mountWithHydration(
           `<div><div>server</div></div>`,
-          () => (
-            openBlock(),
-            createElementBlock('div', null, [
-              createElementVNode(
-                'div',
-                { innerHTML: 'client' },
-                null,
-                PatchFlags.PROPS,
-                ['innerHTML'],
-              ),
-            ])
-          ),
+          () =>
+            createVNode('div', null, [
+              createElementVNode('div', { innerHTML: 'client' }, null),
+            ]),
         )
         expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
       } finally {
@@ -2751,8 +2710,6 @@ describe('SSR hydration', () => {
               value: 'client',
             },
             null,
-            PatchFlags.PROPS,
-            ['id'],
           ),
       )
       const el = container.firstChild as Element

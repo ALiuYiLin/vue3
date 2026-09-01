@@ -3,21 +3,15 @@ import {
   NodeOpTypes,
   type TestElement,
   TestNodeTypes,
-  type VNode,
-  createBlock,
-  createCommentVNode,
   createTextVNode,
   createVNode,
   dumpOps,
   h,
   nodeOps,
-  openBlock,
   render,
   resetOps,
   serializeInner,
 } from '@vue/runtime-test'
-import { PatchFlags } from '@vue/shared'
-import { renderList } from '../src/helpers/renderList'
 
 describe('renderer: fragment', () => {
   it('should allow returning multiple component root nodes', () => {
@@ -107,44 +101,29 @@ describe('renderer: fragment', () => {
   it('patch fragment children (compiler generated, unkeyed)', () => {
     const root = nodeOps.createElement('div')
     render(
-      createVNode(
-        Fragment,
-        null,
-        [
-          createVNode('div', null, 'one', PatchFlags.TEXT),
-          createTextVNode('two'),
-        ],
-        PatchFlags.UNKEYED_FRAGMENT,
-      ),
+      createVNode(Fragment, null, [
+        createVNode('div', null, 'one'),
+        createTextVNode('two'),
+      ]),
       root,
     )
     expect(serializeInner(root)).toBe(`<div>one</div>two`)
 
     render(
-      createVNode(
-        Fragment,
-        null,
-        [
-          createVNode('div', null, 'foo', PatchFlags.TEXT),
-          createTextVNode('bar'),
-          createTextVNode('baz'),
-        ],
-        PatchFlags.UNKEYED_FRAGMENT,
-      ),
+      createVNode(Fragment, null, [
+        createVNode('div', null, 'foo'),
+        createTextVNode('bar'),
+        createTextVNode('baz'),
+      ]),
       root,
     )
     expect(serializeInner(root)).toBe(`<div>foo</div>barbaz`)
 
     render(
-      createVNode(
-        Fragment,
-        null,
-        [
-          createTextVNode('baz'),
-          createVNode('div', null, 'foo', PatchFlags.TEXT),
-        ],
-        PatchFlags.UNKEYED_FRAGMENT,
-      ),
+      createVNode(Fragment, null, [
+        createTextVNode('baz'),
+        createVNode('div', null, 'foo'),
+      ]),
       root,
     )
     expect(serializeInner(root)).toBe(`baz<div>foo</div>`)
@@ -154,24 +133,20 @@ describe('renderer: fragment', () => {
     const root = nodeOps.createElement('div')
 
     render(
-      createVNode(
-        Fragment,
-        null,
-        [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')],
-        PatchFlags.KEYED_FRAGMENT,
-      ),
+      createVNode(Fragment, null, [
+        h('div', { key: 1 }, 'one'),
+        h('div', { key: 2 }, 'two'),
+      ]),
       root,
     )
     expect(serializeInner(root)).toBe(`<div>one</div><div>two</div>`)
 
     resetOps()
     render(
-      createVNode(
-        Fragment,
-        null,
-        [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')],
-        PatchFlags.KEYED_FRAGMENT,
-      ),
+      createVNode(Fragment, null, [
+        h('div', { key: 2 }, 'two'),
+        h('div', { key: 1 }, 'one'),
+      ]),
       root,
     )
     expect(serializeInner(root)).toBe(`<div>two</div><div>one</div>`)
@@ -276,150 +251,8 @@ describe('renderer: fragment', () => {
   })
 
   // #2080
-  test('`template` keyed fragment w/ comment + hoisted node', () => {
-    const root = nodeOps.createElement('div')
-    const hoisted = h('span')
-
-    const renderFn = (items: string[]) => {
-      return (
-        openBlock(true),
-        createBlock(
-          Fragment,
-          null,
-          renderList(items, item => {
-            return (
-              openBlock(),
-              createBlock(
-                Fragment,
-                { key: item },
-                [
-                  createCommentVNode('comment'),
-                  hoisted,
-                  createVNode('div', null, item, PatchFlags.TEXT),
-                ],
-                PatchFlags.STABLE_FRAGMENT,
-              )
-            )
-          }),
-          PatchFlags.KEYED_FRAGMENT,
-        )
-      )
-    }
-
-    render(renderFn(['one', 'two']), root)
-    expect(serializeInner(root)).toBe(
-      `<!--comment--><span></span><div>one</div><!--comment--><span></span><div>two</div>`,
-    )
-
-    render(renderFn(['two', 'one']), root)
-    expect(serializeInner(root)).toBe(
-      `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`,
-    )
-  })
 
   // #10547
-  test('`template` fragment w/ render function', () => {
-    const renderFn = (vnode: VNode) => {
-      return (
-        openBlock(),
-        createBlock(
-          Fragment,
-          null,
-          [createTextVNode('text'), (openBlock(), createBlock(vnode))],
-          PatchFlags.STABLE_FRAGMENT,
-        )
-      )
-    }
-
-    const root = nodeOps.createElement('div')
-    const foo = h('div', ['foo'])
-    const bar = h('div', [h('div', 'bar')])
-
-    render(renderFn(foo), root)
-    expect(serializeInner(root)).toBe(`text<div>foo</div>`)
-
-    render(renderFn(bar), root)
-    expect(serializeInner(root)).toBe(`text<div><div>bar</div></div>`)
-
-    render(renderFn(foo), root)
-    expect(serializeInner(root)).toBe(`text<div>foo</div>`)
-  })
 
   // #10547
-  test('`template` fragment w/ render function + keyed vnode', () => {
-    const renderFn = (vnode: VNode) => {
-      return (
-        openBlock(),
-        createBlock(
-          Fragment,
-          null,
-          [createTextVNode('text'), (openBlock(), createBlock(vnode))],
-          PatchFlags.STABLE_FRAGMENT,
-        )
-      )
-    }
-
-    const root = nodeOps.createElement('div')
-    const foo = h('div', { key: 1 }, [h('div', 'foo')])
-    const bar = h('div', { key: 2 }, [h('div', 'bar'), h('div', 'bar')])
-
-    render(renderFn(foo), root)
-    expect(serializeInner(root)).toBe(`text<div><div>foo</div></div>`)
-
-    render(renderFn(bar), root)
-    expect(serializeInner(root)).toBe(
-      `text<div><div>bar</div><div>bar</div></div>`,
-    )
-
-    render(renderFn(foo), root)
-    expect(serializeInner(root)).toBe(`text<div><div>foo</div></div>`)
-  })
-
-  // #6852
-  test('`template` keyed fragment w/ text', () => {
-    const root = nodeOps.createElement('div')
-
-    const renderFn = (items: string[]) => {
-      return (
-        openBlock(true),
-        createBlock(
-          Fragment,
-          null,
-          renderList(items, item => {
-            return (
-              openBlock(),
-              createBlock(
-                Fragment,
-                { key: item },
-                [
-                  createTextVNode('text'),
-                  createVNode('div', null, item, PatchFlags.TEXT),
-                ],
-                PatchFlags.STABLE_FRAGMENT,
-              )
-            )
-          }),
-          PatchFlags.KEYED_FRAGMENT,
-        )
-      )
-    }
-
-    render(renderFn(['one', 'two']), root)
-    expect(serializeInner(root)).toBe(`text<div>one</div>text<div>two</div>`)
-
-    render(renderFn(['two', 'one']), root)
-    expect(serializeInner(root)).toBe(`text<div>two</div>text<div>one</div>`)
-  })
-
-  // #10007
-  test('empty fragment', () => {
-    const root = nodeOps.createElement('div')
-
-    const renderFn = () => {
-      return (openBlock(true), createBlock(Fragment, null))
-    }
-
-    render(renderFn(), root)
-    expect(serializeInner(root)).toBe('')
-  })
 })

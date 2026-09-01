@@ -15,7 +15,7 @@ export const compatModelEventPrefix = `onModelCompat:`
 const warnedTypes = new WeakSet()
 
 export function convertLegacyVModelProps(vnode: VNode): void {
-  const { type, shapeFlag, props, dynamicProps } = vnode
+  const { type, shapeFlag, props } = vnode
   const comp = type as ComponentOptions
   if (shapeFlag & ShapeFlags.COMPONENT && props && 'modelValue' in props) {
     if (
@@ -53,10 +53,6 @@ export function convertLegacyVModelProps(vnode: VNode): void {
     if (prop !== 'modelValue') {
       props[prop] = props.modelValue
       delete props.modelValue
-    }
-    // important: update dynamic props
-    if (dynamicProps) {
-      dynamicProps[dynamicProps.indexOf('modelValue')] = prop
     }
     props[compatModelEventPrefix + event] = props['onUpdate:modelValue']
     delete props['onUpdate:modelValue']

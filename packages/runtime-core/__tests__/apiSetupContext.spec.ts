@@ -122,7 +122,6 @@ describe('api: setup context', () => {
             default: () => [h('div', attrs)],
             _: 1, // mark stable slots
           })
-          vnode.dynamicChildren = [] // force optimized mode
           return vnode
         }
       },

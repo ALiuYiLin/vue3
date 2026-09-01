@@ -1,7 +1,6 @@
 import { addDefault } from '@babel/helper-module-imports'
 import * as t from '@babel/types'
 import parseDirectives from './parseDirectives.ts'
-import { PatchFlags } from './patchFlags.ts'
 import { SlotFlags } from './slotFlags.ts'
 import {
   buildIIFE,
@@ -10,9 +9,7 @@ import {
   dedupeProperties,
   getJSXAttributeName,
   getTag,
-  isConstant,
   isDirective,
-  isOn,
   transformJSXExpressionContainer,
   transformJSXSpreadAttribute,
   transformJSXSpreadChild,
@@ -24,8 +21,6 @@ import type { Slots, State } from './interface.ts'
 import type { NodePath, Visitor } from '@babel/core'
 
 const xlinkRE = /^xlink([A-Z])/
-
-type ExcludesBoolean = <T>(x: T | false | true) => x is T
 
 function getJSXAttributeValue(
   path: NodePath<t.JSXAttribute>,
@@ -50,10 +45,8 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
   const isComponent = checkIsComponent(path.get('openingElement'), state)
   const props = path.get('openingElement').get('attributes')
   const directives: t.ArrayExpression[] = []
-  const dynamicPropNames = new Set<string>()
 
   let slots: Slots = null
-  let patchFlag = 0
 
   if (props.length === 0) {
     return {
@@ -62,19 +55,10 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
       slots,
       props: t.nullLiteral(),
       directives,
-      patchFlag,
-      dynamicPropNames,
     }
   }
 
   let properties: t.ObjectProperty[] = []
-
-  // patchFlag analysis
-  let hasRef = false
-  let hasClassBinding = false
-  let hasStyleBinding = false
-  let hasHydrationEventBinding = false
-  let hasDynamicKeys = false
 
   const mergeArgs: (t.CallExpression | t.ObjectExpression | t.Identifier)[] = []
   const { mergeProps = true } = state.opts
@@ -84,29 +68,6 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
 
       const attributeValue = getJSXAttributeValue(prop, state)
 
-      if (!isConstant(attributeValue) || name === 'ref') {
-        if (
-          !isComponent &&
-          isOn(name) &&
-          // omit the flag for click handlers becaues hydration gives click
-          // dedicated fast path.
-          name.toLowerCase() !== 'onclick' &&
-          // omit v-model handlers
-          name !== 'onUpdate:modelValue'
-        ) {
-          hasHydrationEventBinding = true
-        }
-
-        if (name === 'ref') {
-          hasRef = true
-        } else if (name === 'class' && !isComponent) {
-          hasClassBinding = true
-        } else if (name === 'style' && !isComponent) {
-          hasStyleBinding = true
-        } else if (name !== 'key' && !isDirective(name) && name !== 'on') {
-          dynamicPropNames.add(name)
-        }
-      }
       if (state.opts.transformOn && (name === 'on' || name === 'nativeOn')) {
         if (!state.get('transformOn')) {
           state.set(
@@ -144,12 +105,10 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
           properties.push(
             t.objectProperty(t.stringLiteral('innerHTML'), values[0] as any),
           )
-          dynamicPropNames.add('innerHTML')
         } else if (directiveName === 'text') {
           properties.push(
             t.objectProperty(t.stringLiteral('textContent'), values[0] as any),
           )
-          dynamicPropNames.add('textContent')
         }
 
         if (['models', 'model'].includes(directiveName)) {
@@ -172,11 +131,6 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
                   isDynamic,
                 ),
               )
-              if (!isDynamic) {
-                dynamicPropNames.add(
-                  (propName as t.StringLiteral)?.value || 'modelValue',
-                )
-              }
 
               if (modifiers[index]?.size) {
                 properties.push(
@@ -228,12 +182,6 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
                 isDynamic,
               ),
             )
-
-            if (isDynamic) {
-              hasDynamicKeys = true
-            } else {
-              dynamicPropNames.add((updateName as t.StringLiteral).value)
-            }
           })
         }
       } else {
@@ -259,7 +207,6 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
       }
 
       // JSXSpreadAttribute
-      hasDynamicKeys = true
       transformJSXSpreadAttribute(
         path as NodePath,
         prop as NodePath<t.JSXSpreadAttribute>,
@@ -268,31 +215,6 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
       )
     }
   })
-
-  // patchFlag analysis
-  if (hasDynamicKeys) {
-    patchFlag |= PatchFlags.FULL_PROPS
-  } else {
-    if (hasClassBinding) {
-      patchFlag |= PatchFlags.CLASS
-    }
-    if (hasStyleBinding) {
-      patchFlag |= PatchFlags.STYLE
-    }
-    if (dynamicPropNames.size) {
-      patchFlag |= PatchFlags.PROPS
-    }
-    if (hasHydrationEventBinding) {
-      patchFlag |= PatchFlags.HYDRATE_EVENTS
-    }
-  }
-
-  if (
-    (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
-    (hasRef || directives.length > 0)
-  ) {
-    patchFlag |= PatchFlags.NEED_PATCH
-  }
 
   let propsExpression: t.Expression | t.ObjectProperty | t.Literal =
     t.nullLiteral()
@@ -328,8 +250,6 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
     isComponent,
     slots,
     directives,
-    patchFlag,
-    dynamicPropNames,
   }
 }
 
@@ -393,15 +313,7 @@ function transformJSXElement(
   state: State,
 ): t.CallExpression {
   const children = getChildren(path.get('children'), state)
-  const {
-    tag,
-    props,
-    isComponent,
-    directives,
-    patchFlag,
-    dynamicPropNames,
-    slots,
-  } = buildProps(path, state)
+  const { tag, props, isComponent, directives, slots } = buildProps(path, state)
 
   const { optimize = false } = state.opts
 
@@ -552,20 +464,11 @@ function transformJSXElement(
     }
   }
 
-  const createVNode = t.callExpression(
-    createIdentifier(state, 'createVNode'),
-    [
-      tag,
-      props,
-      VNodeChild || t.nullLiteral(),
-      !!patchFlag && optimize && t.numericLiteral(patchFlag),
-      !!dynamicPropNames.size &&
-        optimize &&
-        t.arrayExpression(
-          [...dynamicPropNames.keys()].map(name => t.stringLiteral(name)),
-        ),
-    ].filter(Boolean as unknown as ExcludesBoolean),
-  )
+  const createVNode = t.callExpression(createIdentifier(state, 'createVNode'), [
+    tag,
+    props,
+    VNodeChild || t.nullLiteral(),
+  ])
 
   if (!directives.length) {
     return createVNode

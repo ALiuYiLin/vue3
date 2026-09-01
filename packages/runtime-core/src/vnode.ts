@@ -1,6 +1,4 @@
 import {
-  EMPTY_ARR,
-  PatchFlags,
   ShapeFlags,
   SlotFlags,
   extend,
@@ -221,15 +219,6 @@ export interface VNode<
 
   // optimization only
   shapeFlag: number
-  patchFlag: number
-  /**
-   * @internal
-   */
-  dynamicProps: string[] | null
-  /**
-   * @internal
-   */
-  dynamicChildren: (VNode[] & { hasOnce?: boolean }) | null
 
   // application root node only
   appContext: AppContext | null
@@ -255,134 +244,6 @@ export interface VNode<
    * @internal custom element interception hook
    */
   ce?: (instance: ComponentInternalInstance) => void
-}
-
-// Since v-if and v-for are the two possible ways node structure can dynamically
-// change, once we consider v-if branches and each v-for fragment a block, we
-// can divide a template into nested blocks, and within each block the node
-// structure would be stable. This allows us to skip most children diffing
-// and only worry about the dynamic nodes (indicated by patch flags).
-export const blockStack: VNode['dynamicChildren'][] = []
-export let currentBlock: VNode['dynamicChildren'] = null
-
-/**
- * Open a block.
- * This must be called before `createBlock`. It cannot be part of `createBlock`
- * because the children of the block are evaluated before `createBlock` itself
- * is called. The generated code typically looks like this:
- *
- * ```js
- * function render() {
- *   return (openBlock(),createBlock('div', null, [...]))
- * }
- * ```
- * disableTracking is true when creating a v-for fragment block, since a v-for
- * fragment always diffs its children.
- *
- * @private
- */
-export function openBlock(disableTracking = false): void {
-  blockStack.push((currentBlock = disableTracking ? null : []))
-}
-
-export function closeBlock(): void {
-  blockStack.pop()
-  currentBlock = blockStack[blockStack.length - 1] || null
-}
-
-// Whether we should be tracking dynamic child nodes inside a block.
-// Only tracks when this value is > 0
-// We are not using a simple boolean because this value may need to be
-// incremented/decremented by nested usage of v-once (see below)
-export let isBlockTreeEnabled = 1
-
-/**
- * Block tracking sometimes needs to be disabled, for example during the
- * creation of a tree that needs to be cached by v-once. The compiler generates
- * code like this:
- *
- * ``` js
- * _cache[1] || (
- *   setBlockTracking(-1, true),
- *   _cache[1] = createVNode(...),
- *   setBlockTracking(1),
- *   _cache[1]
- * )
- * ```
- *
- * @private
- */
-export function setBlockTracking(value: number, inVOnce = false): void {
-  isBlockTreeEnabled += value
-  if (value < 0 && currentBlock && inVOnce) {
-    // mark current block so it doesn't take fast path and skip possible
-    // nested components during unmount
-    currentBlock.hasOnce = true
-  }
-}
-
-function setupBlock(vnode: VNode) {
-  // save current block children on the block vnode
-  vnode.dynamicChildren =
-    isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
-  // close block
-  closeBlock()
-  // a block is always going to be patched, so track it as a child of its
-  // parent block
-  if (isBlockTreeEnabled > 0 && currentBlock) {
-    currentBlock.push(vnode)
-  }
-  return vnode
-}
-
-/**
- * @private
- */
-export function createElementBlock(
-  type: string | typeof Fragment,
-  props?: Record<string, any> | null,
-  children?: any,
-  patchFlag?: number,
-  dynamicProps?: string[],
-  shapeFlag?: number,
-): VNode {
-  return setupBlock(
-    createBaseVNode(
-      type,
-      props,
-      children,
-      patchFlag,
-      dynamicProps,
-      shapeFlag,
-      true /* isBlock */,
-    ),
-  )
-}
-
-/**
- * Create a block root vnode. Takes the same exact arguments as `createVNode`.
- * A block root keeps track of dynamic nodes within the block in the
- * `dynamicChildren` array.
- *
- * @private
- */
-export function createBlock(
-  type: VNodeTypes | ClassComponent,
-  props?: Record<string, any> | null,
-  children?: any,
-  patchFlag?: number,
-  dynamicProps?: string[],
-): VNode {
-  return setupBlock(
-    createVNode(
-      type,
-      props,
-      children,
-      patchFlag,
-      dynamicProps,
-      true /* isBlock: prevent a block from tracking itself */,
-    ),
-  )
 }
 
 export function isVNode(value: any): value is VNode {
@@ -457,10 +318,7 @@ function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
-  patchFlag = 0,
-  dynamicProps: string[] | null = null,
   shapeFlag: number = type === Fragment ? 0 : ShapeFlags.ELEMENT,
-  isBlockNode = false,
   needFullChildrenNormalization = false,
 ): VNode {
   const vnode = {
@@ -486,9 +344,6 @@ function createBaseVNode(
     targetAnchor: null,
     staticCount: 0,
     shapeFlag,
-    patchFlag,
-    dynamicProps,
-    dynamicChildren: null,
     appContext: null,
     ctx: currentRenderingInstance,
   } as VNode
@@ -512,25 +367,6 @@ function createBaseVNode(
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
-  // track vnode for block tree
-  if (
-    isBlockTreeEnabled > 0 &&
-    // avoid a block node from tracking itself
-    !isBlockNode &&
-    // has current parent block
-    currentBlock &&
-    // presence of a patch flag indicates this node needs patching on updates.
-    // component nodes also should always be patched, because even if the
-    // component doesn't need to update, it needs to persist the instance on to
-    // the next vnode so that it can be properly unmounted later.
-    (vnode.patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
-    // the EVENTS flag is only for hydration and if it is the only flag, the
-    // vnode should not be considered dynamic due to handler caching.
-    vnode.patchFlag !== PatchFlags.NEED_HYDRATION
-  ) {
-    currentBlock.push(vnode)
-  }
-
   if (__COMPAT__) {
     convertLegacyVModelProps(vnode)
     defineLegacyVNodeProperties(vnode)
@@ -549,9 +385,6 @@ function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
-  patchFlag: number = 0,
-  dynamicProps: string[] | null = null,
-  isBlockNode = false,
 ): VNode {
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (__DEV__ && !type) {
@@ -568,14 +401,6 @@ function _createVNode(
     if (children) {
       normalizeChildren(cloned, children)
     }
-    if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
-      if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
-        currentBlock[currentBlock.indexOf(type)] = cloned
-      } else {
-        currentBlock.push(cloned)
-      }
-    }
-    cloned.patchFlag = PatchFlags.BAIL
     return cloned
   }
 
@@ -632,16 +457,7 @@ function _createVNode(
     )
   }
 
-  return createBaseVNode(
-    type,
-    props,
-    children,
-    patchFlag,
-    dynamicProps,
-    shapeFlag,
-    isBlockNode,
-    true,
-  )
+  return createBaseVNode(type, props, children, shapeFlag, true)
 }
 
 export function guardReactiveProps(
@@ -659,7 +475,7 @@ export function cloneVNode<T, U>(
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, ref, patchFlag, children, transition } = vnode
+  const { props, ref, children, transition } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   const cloned: VNode<T, U> = {
     __v_isVNode: true,
@@ -680,27 +496,12 @@ export function cloneVNode<T, U>(
         : ref,
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
-    children:
-      __DEV__ && patchFlag === PatchFlags.CACHED && isArray(children)
-        ? (children as VNode[]).map(deepCloneVNode)
-        : children,
+    children,
     target: vnode.target,
     targetStart: vnode.targetStart,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
-    // if the vnode is cloned with extra props, we can no longer assume its
-    // existing patch flag to be reliable and need to add the FULL_PROPS flag.
-    // note: preserve flag for fragments since they use the flag for children
-    // fast paths only.
-    patchFlag:
-      extraProps && vnode.type !== Fragment
-        ? patchFlag === PatchFlags.CACHED // hoisted node
-          ? PatchFlags.FULL_PROPS
-          : patchFlag | PatchFlags.FULL_PROPS
-        : patchFlag,
-    dynamicProps: vnode.dynamicProps,
-    dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
     dirs: vnode.dirs,
     transition,
@@ -739,22 +540,10 @@ export function cloneVNode<T, U>(
 }
 
 /**
- * Dev only, for HMR of hoisted vnodes reused in v-for
- * https://github.com/vitejs/vite/issues/2022
- */
-function deepCloneVNode(vnode: VNode): VNode {
-  const cloned = cloneVNode(vnode)
-  if (isArray(vnode.children)) {
-    cloned.children = (vnode.children as VNode[]).map(deepCloneVNode)
-  }
-  return cloned
-}
-
-/**
  * @private
  */
-export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
-  return createVNode(Text, null, text, flag)
+export function createTextVNode(text: string = ' '): VNode {
+  return createVNode(Text, null, text)
 }
 
 /**
@@ -774,15 +563,8 @@ export function createStaticVNode(
 /**
  * @private
  */
-export function createCommentVNode(
-  text: string = '',
-  // when used as the v-else branch, the comment node must be created as a
-  // block to ensure correct updates.
-  asBlock: boolean = false,
-): VNode {
-  return asBlock
-    ? (openBlock(), createBlock(Comment, null, text))
-    : createVNode(Comment, null, text)
+export function createCommentVNode(text: string = ''): VNode {
+  return createVNode(Comment, null, text)
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
@@ -809,10 +591,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return (child.el === null && child.patchFlag !== PatchFlags.CACHED) ||
-    child.memo
-    ? child
-    : cloneVNode(child)
+  return child.el === null || child.memo ? child : cloneVNode(child)
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown): void {
@@ -849,7 +628,6 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
           ;(children as RawSlots)._ = SlotFlags.STABLE
         } else {
           ;(children as RawSlots)._ = SlotFlags.DYNAMIC
-          vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
       }
     }

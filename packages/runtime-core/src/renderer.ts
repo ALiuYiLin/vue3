@@ -22,7 +22,6 @@ import {
   setupComponent,
 } from './component'
 import {
-  filterSingleRoot,
   renderComponentRoot,
   shouldUpdateComponent,
   updateHOCHostEl,
@@ -31,7 +30,6 @@ import {
   EMPTY_ARR,
   EMPTY_OBJ,
   NOOP,
-  PatchFlags,
   ShapeFlags,
   def,
   getGlobalThis,
@@ -173,7 +171,6 @@ export interface RendererInternals<
   mt: MountComponentFn
   mc: MountChildrenFn
   pc: PatchChildrenFn
-  pbc: PatchBlockChildrenFn
   n: NextFn
   o: RendererOptions<HostNode, HostElement>
 }
@@ -190,7 +187,6 @@ type PatchFn = (
   parentSuspense?: SuspenseBoundary | null,
   namespace?: ElementNamespace,
   slotScopeIds?: string[] | null,
-  optimized?: boolean,
 ) => void
 
 type MountChildrenFn = (
@@ -201,7 +197,6 @@ type MountChildrenFn = (
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
   slotScopeIds: string[] | null,
-  optimized: boolean,
   start?: number,
 ) => void
 
@@ -210,17 +205,6 @@ type PatchChildrenFn = (
   n2: VNode,
   container: RendererElement,
   anchor: RendererNode | null,
-  parentComponent: ComponentInternalInstance | null,
-  parentSuspense: SuspenseBoundary | null,
-  namespace: ElementNamespace,
-  slotScopeIds: string[] | null,
-  optimized: boolean,
-) => void
-
-type PatchBlockChildrenFn = (
-  oldChildren: VNode[],
-  newChildren: VNode[],
-  fallbackContainer: RendererElement,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
@@ -242,7 +226,6 @@ type UnmountFn = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   doRemove?: boolean,
-  optimized?: boolean,
 ) => void
 
 type RemoveFn = (vnode: VNode) => void
@@ -252,7 +235,6 @@ type UnmountChildrenFn = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   doRemove?: boolean,
-  optimized?: boolean,
   start?: number,
 ) => void
 
@@ -263,7 +245,6 @@ export type MountComponentFn = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
-  optimized: boolean,
 ) => void
 
 type ProcessTextOrCommentFn = (
@@ -280,7 +261,6 @@ export type SetupRenderEffectFn = (
   anchor: RendererNode | null,
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
-  optimized: boolean,
 ) => void
 
 export enum MoveType {
@@ -385,7 +365,6 @@ function baseCreateRenderer(
     parentSuspense = null,
     namespace = undefined,
     slotScopeIds = null,
-    optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren,
   ) => {
     if (n1 === n2) {
       return
@@ -396,11 +375,6 @@ function baseCreateRenderer(
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
-    }
-
-    if (n2.patchFlag === PatchFlags.BAIL) {
-      optimized = false
-      n2.dynamicChildren = null
     }
 
     const { type, ref, shapeFlag } = n2
@@ -428,7 +402,6 @@ function baseCreateRenderer(
           parentSuspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
         break
       default:
@@ -442,7 +415,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(
@@ -454,7 +426,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           ;(type as typeof TeleportImpl).process(
@@ -466,7 +437,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
             internals,
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
@@ -479,7 +449,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
             internals,
           )
         } else if (__DEV__) {
@@ -606,7 +575,6 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => {
     if (n2.type === 'svg') {
       namespace = 'svg'
@@ -623,7 +591,6 @@ function baseCreateRenderer(
         parentSuspense,
         namespace,
         slotScopeIds,
-        optimized,
       )
     } else {
       const customElement =
@@ -641,7 +608,6 @@ function baseCreateRenderer(
           parentSuspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
       } finally {
         if (customElement) {
@@ -659,7 +625,6 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => {
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
@@ -685,7 +650,6 @@ function baseCreateRenderer(
         parentSuspense,
         resolveChildrenNamespace(vnode, namespace),
         slotScopeIds,
-        optimized,
       )
     }
 
@@ -771,14 +735,6 @@ function baseCreateRenderer(
     if (parentComponent) {
       let subTree = parentComponent.subTree
       if (
-        __DEV__ &&
-        subTree.patchFlag > 0 &&
-        subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-      ) {
-        subTree =
-          filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
-      }
-      if (
         vnode === subTree ||
         (isSuspense(subTree.type) &&
           (subTree.ssContent === vnode || subTree.ssFallback === vnode))
@@ -803,13 +759,10 @@ function baseCreateRenderer(
     parentSuspense,
     namespace: ElementNamespace,
     slotScopeIds,
-    optimized,
     start = 0,
   ) => {
     for (let i = start; i < children.length; i++) {
-      const child = (children[i] = optimized
-        ? cloneIfMounted(children[i] as VNode)
-        : normalizeVNode(children[i]))
+      const child = (children[i] = normalizeVNode(children[i]))
       patch(
         null,
         child,
@@ -819,7 +772,6 @@ function baseCreateRenderer(
         parentSuspense,
         namespace,
         slotScopeIds,
-        optimized,
       )
     }
   }
@@ -831,16 +783,12 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => {
     const el = (n2.el = n1.el!)
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       el.__vnode = n2
     }
-    let { patchFlag, dynamicChildren, dirs } = n2
-    // #1426 take the old vnode's patch flag into account since user may clone a
-    // compiler-generated vnode, which de-opts to FULL_PROPS
-    patchFlag |= n1.patchFlag & PatchFlags.FULL_PROPS
+    const { dirs } = n2
     const oldProps = n1.props || EMPTY_OBJ
     const newProps = n2.props || EMPTY_OBJ
     let vnodeHook: VNodeHook | undefined | null
@@ -855,20 +803,6 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (
-      // HMR updated, force full diff
-      (__DEV__ && isHmrUpdating) ||
-      // #6385 the old vnode may be a user-wrapped non-isomorphic block
-      // Force full diff when block metadata is unstable.
-      (dynamicChildren &&
-        (!n1.dynamicChildren ||
-          n1.dynamicChildren.length !== dynamicChildren.length))
-    ) {
-      patchFlag = 0
-      optimized = false
-      dynamicChildren = null
-    }
-
     // #9135 innerHTML / textContent unset needs to happen before possible
     // new children mount
     if (
@@ -878,141 +812,26 @@ function baseCreateRenderer(
       hostSetElementText(el, '')
     }
 
-    if (dynamicChildren) {
-      patchBlockChildren(
-        n1.dynamicChildren!,
-        dynamicChildren,
-        el,
-        parentComponent,
-        parentSuspense,
-        resolveChildrenNamespace(n2, namespace),
-        slotScopeIds,
-      )
-      if (__DEV__) {
-        // necessary for HMR
-        traverseStaticChildren(n1, n2)
-      }
-    } else if (!optimized) {
-      // full diff
-      patchChildren(
-        n1,
-        n2,
-        el,
-        null,
-        parentComponent,
-        parentSuspense,
-        resolveChildrenNamespace(n2, namespace),
-        slotScopeIds,
-        false,
-      )
-    }
+    // full diff
+    patchChildren(
+      n1,
+      n2,
+      el,
+      null,
+      parentComponent,
+      parentSuspense,
+      resolveChildrenNamespace(n2, namespace),
+      slotScopeIds,
+    )
 
-    if (patchFlag > 0) {
-      // the presence of a patchFlag means this element's render code was
-      // generated by the compiler and can take the fast path.
-      // in this path old node and new node are guaranteed to have the same shape
-      // (i.e. at the exact same position in the source template)
-      if (patchFlag & PatchFlags.FULL_PROPS) {
-        // element props contain dynamic keys, full diff needed
-        patchProps(el, oldProps, newProps, parentComponent, namespace)
-      } else {
-        // class
-        // this flag is matched when the element has dynamic class bindings.
-        if (patchFlag & PatchFlags.CLASS) {
-          if (oldProps.class !== newProps.class) {
-            hostPatchProp(el, 'class', null, newProps.class, namespace)
-          }
-        }
-
-        // style
-        // this flag is matched when the element has dynamic style bindings
-        if (patchFlag & PatchFlags.STYLE) {
-          hostPatchProp(el, 'style', oldProps.style, newProps.style, namespace)
-        }
-
-        // props
-        // This flag is matched when the element has dynamic prop/attr bindings
-        // other than class and style. The keys of dynamic prop/attrs are saved for
-        // faster iteration.
-        // Note dynamic keys like :[foo]="bar" will cause this optimization to
-        // bail out and go through a full diff because we need to unset the old key
-        if (patchFlag & PatchFlags.PROPS) {
-          // if the flag is present then dynamicProps must be non-null
-          const propsToUpdate = n2.dynamicProps!
-          for (let i = 0; i < propsToUpdate.length; i++) {
-            const key = propsToUpdate[i]
-            const prev = oldProps[key]
-            const next = newProps[key]
-            // #1471 force patch value
-            if (next !== prev || key === 'value') {
-              hostPatchProp(el, key, prev, next, namespace, parentComponent)
-            }
-          }
-        }
-      }
-
-      // text
-      // This flag is matched when the element has only dynamic text children.
-      if (patchFlag & PatchFlags.TEXT) {
-        if (n1.children !== n2.children) {
-          hostSetElementText(el, n2.children as string)
-        }
-      }
-    } else if (!optimized && dynamicChildren == null) {
-      // unoptimized, full diff
-      patchProps(el, oldProps, newProps, parentComponent, namespace)
-    }
+    // full props diff
+    patchProps(el, oldProps, newProps, parentComponent, namespace)
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
         dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
       }, parentSuspense)
-    }
-  }
-
-  // The fast path for blocks.
-  const patchBlockChildren: PatchBlockChildrenFn = (
-    oldChildren,
-    newChildren,
-    fallbackContainer,
-    parentComponent,
-    parentSuspense,
-    namespace: ElementNamespace,
-    slotScopeIds,
-  ) => {
-    for (let i = 0; i < newChildren.length; i++) {
-      const oldVNode = oldChildren[i]
-      const newVNode = newChildren[i]
-      // Determine the container (parent element) for the patch.
-      const container =
-        // oldVNode may be an errored async setup() component inside Suspense
-        // which will not have a mounted element
-        oldVNode.el &&
-        // - In the case of a Fragment, we need to provide the actual parent
-        // of the Fragment itself so it can move its children.
-        (oldVNode.type === Fragment ||
-          // - In the case of different nodes, there is going to be a replacement
-          // which also requires the correct parent container
-          !isSameVNodeType(oldVNode, newVNode) ||
-          // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag &
-            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
-          ? hostParentNode(oldVNode.el)!
-          : // In other cases, the parent container is not actually used so we
-            // just pass the block element here to avoid a DOM parentNode call.
-            fallbackContainer
-      patch(
-        oldVNode,
-        newVNode,
-        container,
-        null,
-        parentComponent,
-        parentSuspense,
-        namespace,
-        slotScopeIds,
-        true,
-      )
     }
   }
 
@@ -1063,29 +882,15 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => {
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
-    let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
-
-    if (
-      __DEV__ &&
-      // #5523 dev root fragment may inherit directives
-      (isHmrUpdating || patchFlag & PatchFlags.DEV_ROOT_FRAGMENT)
-    ) {
-      // HMR updated / Dev root fragment (w/ comments), force full diff
-      patchFlag = 0
-      optimized = false
-      dynamicChildren = null
-    }
-
     // check if this is a slot fragment with :slotted scope ids
-    if (fragmentSlotScopeIds) {
+    if (n2.slotScopeIds) {
       slotScopeIds = slotScopeIds
-        ? slotScopeIds.concat(fragmentSlotScopeIds)
-        : fragmentSlotScopeIds
+        ? slotScopeIds.concat(n2.slotScopeIds)
+        : n2.slotScopeIds
     }
 
     if (n1 == null) {
@@ -1106,59 +911,19 @@ function baseCreateRenderer(
         parentSuspense,
         namespace,
         slotScopeIds,
-        optimized,
       )
     } else {
-      if (
-        patchFlag > 0 &&
-        patchFlag & PatchFlags.STABLE_FRAGMENT &&
-        dynamicChildren &&
-        // #2715 the previous fragment could've been a BAILed one as a result
-        // of renderSlot() with no valid children
-        n1.dynamicChildren &&
-        n1.dynamicChildren.length === dynamicChildren.length
-      ) {
-        // a stable fragment (template root or <template v-for>) doesn't need to
-        // patch children order, but it may contain dynamicChildren.
-        patchBlockChildren(
-          n1.dynamicChildren,
-          dynamicChildren,
-          container,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-        )
-        if (__DEV__) {
-          // necessary for HMR
-          traverseStaticChildren(n1, n2)
-        } else if (
-          // #2080 if the stable fragment has a key, it's a <template v-for> that may
-          //  get moved around. Make sure all root level vnodes inherit el.
-          // #2134 or if it's a component root, it may also get moved around
-          // as the component is being moved.
-          n2.key != null ||
-          (parentComponent && n2 === parentComponent.subTree)
-        ) {
-          traverseStaticChildren(n1, n2, true /* shallow */)
-        }
-      } else {
-        // keyed / unkeyed, or manual fragments.
-        // for keyed & unkeyed, since they are compiler generated from v-for,
-        // each child is guaranteed to be a block so the fragment will never
-        // have dynamicChildren.
-        patchChildren(
-          n1,
-          n2,
-          container,
-          fragmentEndAnchor,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-          optimized,
-        )
-      }
+      // keyed / unkeyed, or manual fragments: full diff
+      patchChildren(
+        n1,
+        n2,
+        container,
+        fragmentEndAnchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+      )
     }
   }
 
@@ -1171,7 +936,6 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
@@ -1181,7 +945,6 @@ function baseCreateRenderer(
           container,
           anchor,
           namespace,
-          optimized,
         )
       } else {
         mountComponent(
@@ -1191,11 +954,10 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           namespace,
-          optimized,
         )
       }
     } else {
-      updateComponent(n1, n2, optimized)
+      updateComponent(n1, n2)
     }
   }
 
@@ -1206,7 +968,6 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense,
     namespace: ElementNamespace,
-    optimized,
   ) => {
     // 2.x compat may pre-create the component instance before actually
     // mounting
@@ -1239,7 +1000,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      setupComponent(instance, false, optimized)
+      setupComponent(instance)
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1251,8 +1012,7 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense &&
-        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
+      parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect)
 
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
@@ -1269,7 +1029,6 @@ function baseCreateRenderer(
         anchor,
         parentSuspense,
         namespace,
-        optimized,
       )
     }
 
@@ -1279,9 +1038,9 @@ function baseCreateRenderer(
     }
   }
 
-  const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+  const updateComponent = (n1: VNode, n2: VNode) => {
     const instance = (n2.component = n1.component)!
-    if (shouldUpdateComponent(n1, n2, optimized)) {
+    if (shouldUpdateComponent(n1, n2)) {
       if (
         __FEATURE_SUSPENSE__ &&
         instance.asyncDep &&
@@ -1292,7 +1051,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           pushWarningContext(n2)
         }
-        updateComponentPreRender(instance, n2, optimized)
+        updateComponentPreRender(instance, n2)
         if (__DEV__) {
           popWarningContext()
         }
@@ -1317,7 +1076,6 @@ function baseCreateRenderer(
     anchor,
     parentSuspense,
     namespace: ElementNamespace,
-    optimized,
   ) => {
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
@@ -1480,7 +1238,7 @@ function baseCreateRenderer(
             // only sync the properties and abort the rest of operations
             if (next) {
               next.el = vnode.el
-              updateComponentPreRender(instance, next, optimized)
+              updateComponentPreRender(instance, next)
             }
             // and continue the rest of operations once the deps are resolved
             nonHydratedAsyncRoot.asyncDep!.then(() => {
@@ -1506,7 +1264,7 @@ function baseCreateRenderer(
         toggleRecurse(instance, false)
         if (next) {
           next.el = vnode.el
-          updateComponentPreRender(instance, next, optimized)
+          updateComponentPreRender(instance, next)
         } else {
           next = vnode
         }
@@ -1623,14 +1381,13 @@ function baseCreateRenderer(
   const updateComponentPreRender = (
     instance: ComponentInternalInstance,
     nextVNode: VNode,
-    optimized: boolean,
   ) => {
     nextVNode.component = instance
     const prevProps = instance.vnode.props
     instance.vnode = nextVNode
     instance.next = null
-    updateProps(instance, nextVNode.props, prevProps, optimized)
-    updateSlots(instance, nextVNode.children, optimized)
+    updateProps(instance, nextVNode.props, prevProps)
+    updateSlots(instance, nextVNode.children)
 
     pauseTracking()
     // props update may have triggered pre-flush watchers.
@@ -1648,47 +1405,12 @@ function baseCreateRenderer(
     parentSuspense,
     namespace: ElementNamespace,
     slotScopeIds,
-    optimized = false,
   ) => {
     const c1 = n1 && n1.children
     const prevShapeFlag = n1 ? n1.shapeFlag : 0
     const c2 = n2.children
 
-    const { patchFlag, shapeFlag } = n2
-    // fast path
-    if (patchFlag > 0) {
-      if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
-        // this could be either fully-keyed or mixed (some keyed some not)
-        // presence of patchFlag means children are guaranteed to be arrays
-        patchKeyedChildren(
-          c1 as VNode[],
-          c2 as VNodeArrayChildren,
-          container,
-          anchor,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-          optimized,
-        )
-        return
-      } else if (patchFlag & PatchFlags.UNKEYED_FRAGMENT) {
-        // unkeyed
-        patchUnkeyedChildren(
-          c1 as VNode[],
-          c2 as VNodeArrayChildren,
-          container,
-          anchor,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-          optimized,
-        )
-        return
-      }
-    }
-
+    const { shapeFlag } = n2
     // children has 3 possibilities: text, array or no children.
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
@@ -1712,7 +1434,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
         } else {
           // no new children, just unmount old
@@ -1734,69 +1455,9 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
         }
       }
-    }
-  }
-
-  const patchUnkeyedChildren = (
-    c1: VNode[],
-    c2: VNodeArrayChildren,
-    container: RendererElement,
-    anchor: RendererNode | null,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary | null,
-    namespace: ElementNamespace,
-    slotScopeIds: string[] | null,
-    optimized: boolean,
-  ) => {
-    c1 = c1 || EMPTY_ARR
-    c2 = c2 || EMPTY_ARR
-    const oldLength = c1.length
-    const newLength = c2.length
-    const commonLength = Math.min(oldLength, newLength)
-    let i
-    for (i = 0; i < commonLength; i++) {
-      const nextChild = (c2[i] = optimized
-        ? cloneIfMounted(c2[i] as VNode)
-        : normalizeVNode(c2[i]))
-      patch(
-        c1[i],
-        nextChild,
-        container,
-        null,
-        parentComponent,
-        parentSuspense,
-        namespace,
-        slotScopeIds,
-        optimized,
-      )
-    }
-    if (oldLength > newLength) {
-      // remove old
-      unmountChildren(
-        c1,
-        parentComponent,
-        parentSuspense,
-        true,
-        false,
-        commonLength,
-      )
-    } else {
-      // mount new
-      mountChildren(
-        c2,
-        container,
-        anchor,
-        parentComponent,
-        parentSuspense,
-        namespace,
-        slotScopeIds,
-        optimized,
-        commonLength,
-      )
     }
   }
 
@@ -1810,7 +1471,6 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => {
     let i = 0
     const l2 = c2.length
@@ -1822,9 +1482,7 @@ function baseCreateRenderer(
     // (a b) d e
     while (i <= e1 && i <= e2) {
       const n1 = c1[i]
-      const n2 = (c2[i] = optimized
-        ? cloneIfMounted(c2[i] as VNode)
-        : normalizeVNode(c2[i]))
+      const n2 = (c2[i] = normalizeVNode(c2[i]))
       if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
@@ -1835,7 +1493,6 @@ function baseCreateRenderer(
           parentSuspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
       } else {
         break
@@ -1848,9 +1505,7 @@ function baseCreateRenderer(
     // d e (b c)
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
-      const n2 = (c2[e2] = optimized
-        ? cloneIfMounted(c2[e2] as VNode)
-        : normalizeVNode(c2[e2]))
+      const n2 = (c2[e2] = normalizeVNode(c2[e2]))
       if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
@@ -1861,7 +1516,6 @@ function baseCreateRenderer(
           parentSuspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
       } else {
         break
@@ -1884,16 +1538,13 @@ function baseCreateRenderer(
         while (i <= e2) {
           patch(
             null,
-            (c2[i] = optimized
-              ? cloneIfMounted(c2[i] as VNode)
-              : normalizeVNode(c2[i])),
+            (c2[i] = normalizeVNode(c2[i])),
             container,
             anchor,
             parentComponent,
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
           i++
         }
@@ -1925,9 +1576,7 @@ function baseCreateRenderer(
       // 5.1 build key:index map for newChildren
       const keyToNewIndexMap: Map<PropertyKey, number> = new Map()
       for (i = s2; i <= e2; i++) {
-        const nextChild = (c2[i] = optimized
-          ? cloneIfMounted(c2[i] as VNode)
-          : normalizeVNode(c2[i]))
+        const nextChild = (c2[i] = normalizeVNode(c2[i]))
         if (nextChild.key != null) {
           if (__DEV__ && keyToNewIndexMap.has(nextChild.key)) {
             warn(
@@ -1996,7 +1645,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
           patched++
         }
@@ -2029,7 +1677,6 @@ function baseCreateRenderer(
             parentSuspense,
             namespace,
             slotScopeIds,
-            optimized,
           )
         } else if (moved) {
           // move if:
@@ -2143,24 +1790,8 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense,
     doRemove = false,
-    optimized = false,
   ) => {
-    const {
-      type,
-      props,
-      ref,
-      children,
-      dynamicChildren,
-      shapeFlag,
-      patchFlag,
-      dirs,
-      cacheIndex,
-      memo,
-    } = vnode
-
-    if (patchFlag === PatchFlags.BAIL) {
-      optimized = false
-    }
+    const { props, ref, children, shapeFlag, dirs, cacheIndex, memo } = vnode
 
     // unset ref
     if (ref != null) {
@@ -2210,32 +1841,7 @@ function baseCreateRenderer(
           internals,
           doRemove,
         )
-      } else if (
-        dynamicChildren &&
-        // #5154
-        // when v-once is used inside a block, setBlockTracking(-1) marks the
-        // parent block with hasOnce: true
-        // so that it doesn't take the fast path during unmount - otherwise
-        // components nested in v-once are never unmounted.
-        !dynamicChildren.hasOnce &&
-        // #1153: fast path should not be taken for non-stable (v-for) fragments
-        (type !== Fragment ||
-          (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
-      ) {
-        // fast path for block nodes: only need to unmount dynamic children.
-        unmountChildren(
-          dynamicChildren,
-          parentComponent,
-          parentSuspense,
-          false,
-          true,
-        )
-      } else if (
-        (type === Fragment &&
-          patchFlag &
-            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
-        (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
-      ) {
+      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
@@ -2269,23 +1875,7 @@ function baseCreateRenderer(
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
     if (type === Fragment) {
-      if (
-        __DEV__ &&
-        vnode.patchFlag > 0 &&
-        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT &&
-        transition &&
-        !transition.persisted
-      ) {
-        ;(vnode.children as VNode[]).forEach(child => {
-          if (child.type === Comment) {
-            hostRemove(child.el!)
-          } else {
-            remove(child)
-          }
-        })
-      } else {
-        removeFragment(el!, anchor!)
-      }
+      removeFragment(el!, anchor!)
       return
     }
 
@@ -2392,11 +1982,10 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense,
     doRemove = false,
-    optimized = false,
     start = 0,
   ) => {
     for (let i = start; i < children.length; i++) {
-      unmount(children[i], parentComponent, parentSuspense, doRemove, optimized)
+      unmount(children[i], parentComponent, parentSuspense, doRemove)
     }
   }
 
@@ -2451,7 +2040,6 @@ function baseCreateRenderer(
     mt: mountComponent,
     mc: mountChildren,
     pc: patchChildren,
-    pbc: patchBlockChildren,
     n: getNextHostNode,
     o: options,
   }
@@ -2529,24 +2117,17 @@ export function traverseStaticChildren(
   const ch2 = n2.children
   if (isArray(ch1) && isArray(ch2)) {
     for (let i = 0; i < ch1.length; i++) {
-      // this is only called in the optimized path so array children are
-      // guaranteed to be vnodes
       const c1 = ch1[i] as VNode
       let c2 = ch2[i] as VNode
-      if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
-        if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.NEED_HYDRATION) {
-          c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
-          c2.el = c1.el
-        }
-        if (!shallow && c2.patchFlag !== PatchFlags.BAIL)
-          traverseStaticChildren(c1, c2)
+      if (c2.shapeFlag & ShapeFlags.ELEMENT) {
+        c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
+        c2.el = c1.el
+        if (!shallow) traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
         // avoid cached text nodes retaining detached dom nodes
-        if (c2.patchFlag === PatchFlags.CACHED) {
-          c2 = ch2[i] = cloneIfMounted(c2)
-        }
+        c2 = ch2[i] = cloneIfMounted(c2)
         c2.el = c1.el
       }
       // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which

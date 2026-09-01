@@ -9,7 +9,7 @@ import {
   serializeInner,
   useSlots,
 } from '@vue/runtime-test'
-import { createBlock, normalizeVNode } from '../src/vnode'
+import { createVNode, normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
 
 describe('component: slots', () => {
@@ -35,7 +35,7 @@ describe('component: slots', () => {
       },
     }
     const slots = { foo: () => {}, _: 1 }
-    render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
+    render(createVNode(Comp, null, slots), nodeOps.createElement('div'))
     expect(instance.slots).toMatchObject(slots)
   })
 
@@ -60,7 +60,7 @@ describe('component: slots', () => {
       },
     }
     const slots = { foo: () => {}, _: 1 }
-    render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
+    render(createVNode(Comp, null, slots), nodeOps.createElement('div'))
   })
 
   test('initSlots: should normalize object slots (when value is null, string, array)', () => {

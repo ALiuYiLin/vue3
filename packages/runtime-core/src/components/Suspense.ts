@@ -2,13 +2,9 @@ import {
   Comment,
   type VNode,
   type VNodeProps,
-  closeBlock,
   createVNode,
-  currentBlock,
-  isBlockTreeEnabled,
   isSameVNodeType,
   normalizeVNode,
-  openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
 import {
@@ -83,7 +79,6 @@ export const SuspenseImpl = {
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals,
   ): void {
@@ -96,7 +91,6 @@ export const SuspenseImpl = {
         parentSuspense,
         namespace,
         slotScopeIds,
-        optimized,
         rendererInternals,
       )
     } else {
@@ -126,7 +120,6 @@ export const SuspenseImpl = {
         parentComponent,
         namespace,
         slotScopeIds,
-        optimized,
         rendererInternals,
       )
     }
@@ -167,7 +160,6 @@ function mountSuspense(
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
   slotScopeIds: string[] | null,
-  optimized: boolean,
   rendererInternals: RendererInternals,
 ) {
   const {
@@ -184,7 +176,6 @@ function mountSuspense(
     anchor,
     namespace,
     slotScopeIds,
-    optimized,
     rendererInternals,
   ))
 
@@ -232,7 +223,6 @@ function patchSuspense(
   parentComponent: ComponentInternalInstance | null,
   namespace: ElementNamespace,
   slotScopeIds: string[] | null,
-  optimized: boolean,
   { p: patch, um: unmount, o: { createElement } }: RendererInternals,
 ) {
   const suspense = (n2.suspense = n1.suspense)!
@@ -255,7 +245,6 @@ function patchSuspense(
         suspense,
         namespace,
         slotScopeIds,
-        optimized,
       )
       if (suspense.deps <= 0) {
         suspense.resolve()
@@ -276,7 +265,6 @@ function patchSuspense(
             null, // fallback tree will not have suspense context
             namespace,
             slotScopeIds,
-            optimized,
           )
           setActiveBranch(suspense, newFallback)
         }
@@ -312,7 +300,6 @@ function patchSuspense(
           suspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
@@ -326,7 +313,6 @@ function patchSuspense(
             null, // fallback tree will not have suspense context
             namespace,
             slotScopeIds,
-            optimized,
           )
           setActiveBranch(suspense, newFallback)
         }
@@ -341,7 +327,6 @@ function patchSuspense(
           suspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
         // force resolve
         suspense.resolve(true)
@@ -356,7 +341,6 @@ function patchSuspense(
           suspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
@@ -375,7 +359,6 @@ function patchSuspense(
         suspense,
         namespace,
         slotScopeIds,
-        optimized,
       )
       setActiveBranch(suspense, newBranch)
     } else {
@@ -398,7 +381,6 @@ function patchSuspense(
         suspense,
         namespace,
         slotScopeIds,
-        optimized,
       )
       if (suspense.deps <= 0) {
         // incoming branch has no async deps, resolve now.
@@ -447,7 +429,6 @@ export interface SuspenseBoundary {
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: SetupRenderEffectFn,
-    optimized: boolean,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -463,7 +444,6 @@ function createSuspenseBoundary(
   anchor: RendererNode | null,
   namespace: ElementNamespace,
   slotScopeIds: string[] | null,
-  optimized: boolean,
   rendererInternals: RendererInternals,
   isHydrating = false,
 ): SuspenseBoundary {
@@ -674,7 +654,6 @@ function createSuspenseBoundary(
           null, // fallback tree will not have suspense context
           namespace,
           slotScopeIds,
-          optimized,
         )
         setActiveBranch(suspense, fallbackVNode)
       }
@@ -710,7 +689,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect, optimized) {
+    registerDep(instance, setupRenderEffect) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
@@ -759,7 +738,6 @@ function createSuspenseBoundary(
             hydratedEl ? null : next(instance.subTree),
             suspense,
             namespace,
-            optimized,
           )
           if (placeholder) {
             // clean up placeholder reference
@@ -808,7 +786,6 @@ function hydrateSuspense(
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
   slotScopeIds: string[] | null,
-  optimized: boolean,
   rendererInternals: RendererInternals,
   hydrateNode: (
     node: Node,
@@ -816,7 +793,6 @@ function hydrateSuspense(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => Node | null,
 ): Node | null {
   const suspense = (vnode.suspense = createSuspenseBoundary(
@@ -829,7 +805,6 @@ function hydrateSuspense(
     null,
     namespace,
     slotScopeIds,
-    optimized,
     rendererInternals,
     true /* hydrating */,
   ))
@@ -845,7 +820,6 @@ function hydrateSuspense(
     parentComponent,
     suspense,
     slotScopeIds,
-    optimized,
   )
   if (suspense.deps === 0) {
     suspense.resolve(false, true)
@@ -865,22 +839,8 @@ function normalizeSuspenseChildren(vnode: VNode): void {
 }
 
 function normalizeSuspenseSlot(s: any) {
-  let block: VNode[] | null | undefined
   if (isFunction(s)) {
-    const trackBlock = isBlockTreeEnabled && s._c
-    if (trackBlock) {
-      // disableTracking: false
-      // allow block tracking for compiled slots
-      // (see ./componentRenderContext.ts)
-      s._d = false
-      openBlock()
-    }
     s = s()
-    if (trackBlock) {
-      s._d = true
-      block = currentBlock
-      closeBlock()
-    }
   }
   if (isArray(s)) {
     const singleChild = filterSingleRoot(s)
@@ -894,9 +854,6 @@ function normalizeSuspenseSlot(s: any) {
     s = singleChild
   }
   s = normalizeVNode(s)
-  if (block && !s.dynamicChildren) {
-    s.dynamicChildren = block.filter(c => c !== s)
-  }
   return s
 }
 

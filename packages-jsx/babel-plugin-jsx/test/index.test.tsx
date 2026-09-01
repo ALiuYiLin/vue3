@@ -9,17 +9,6 @@ import {
   type CSSProperties,
 } from 'vue'
 
-function patchFlagExpect(
-  wrapper: VueWrapper<ComponentPublicInstance>,
-  flag: number,
-  dynamic: string[] | null,
-) {
-  const { patchFlag, dynamicProps } = wrapper.vm.$.subTree as any
-
-  expect(patchFlag).toBe(flag)
-  expect(dynamicProps).toEqual(dynamic)
-}
-
 describe('Transform JSX', () => {
   test('should render with render function', () => {
     const wrapper = shallowMount({
@@ -332,83 +321,6 @@ describe('slots', () => {
     })
 
     expect(wrapper.html()).toBe('<div>foo</div>')
-  })
-})
-
-describe('PatchFlags', () => {
-  test('static', () => {
-    const wrapper = shallowMount({
-      setup() {
-        return () => <div class="static">static</div>
-      },
-    })
-    patchFlagExpect(wrapper, 0, null)
-  })
-
-  // NOTE: these PatchFlags tests are SKIPPED because @vue/test-utils resolves
-  // its own registry `vue` copy (externalized from the vite alias), so the
-  // mounted components run against vue 3.5.42 instead of the workspace
-  // runtime and reactive updates don't apply. The patchFlag assertions are
-  // scheduled for removal in the JSX-only refactor (stage C); the update
-  // behavior they cover is already validated by packages-jsx/__tests__/
-  // jsx-core.test.tsx against the workspace runtime.
-  test.skip('props', async () => {
-    const wrapper = mount({
-      setup() {
-        const visible = ref(true)
-        const onClick = () => {
-          visible.value = false
-        }
-        return () => (
-          <div v-show={visible.value} onClick={onClick}>
-            NEED_PATCH
-          </div>
-        )
-      },
-    })
-
-    patchFlagExpect(wrapper, 8, ['onClick'])
-    await wrapper.trigger('click')
-    expect(wrapper.html()).toBe('<div style="display: none;">NEED_PATCH</div>')
-  })
-
-  test.skip('#728: template literals with expressions should be treated as dynamic', async () => {
-    const wrapper = mount({
-      setup() {
-        const foo = ref(0)
-        return () => (
-          <button
-            value={String(foo.value)}
-            onClick={() => foo.value++}
-          ></button>
-        )
-      },
-    })
-    patchFlagExpect(wrapper, 8, ['value', 'onClick'])
-    await wrapper.trigger('click')
-    expect(wrapper.html()).toBe('<button value="1"></button>')
-  })
-
-  test.skip('full props', async () => {
-    const wrapper = mount({
-      setup() {
-        const bindProps = reactive({ class: 'a', style: { marginTop: 10 } })
-        const onClick = () => {
-          bindProps.class = 'b'
-        }
-
-        return () => (
-          <div {...bindProps} class="static" onClick={onClick}>
-            full props
-          </div>
-        )
-      },
-    })
-    patchFlagExpect(wrapper, 16, ['onClick'])
-
-    await wrapper.trigger('click')
-
-    expect(wrapper.classes().toSorted()).toEqual(['b', 'static'].toSorted())
   })
 })
 

@@ -809,14 +809,13 @@ export let isInSSRComponentSetup = false
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
-  optimized = false,
 ): Promise<void> | undefined {
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children, optimized || isSSR)
+  initSlots(instance, children)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)

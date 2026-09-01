@@ -17,7 +17,7 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
+import { ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
@@ -553,7 +553,6 @@ export function getTransitionRawChildren(
   parentKey?: VNode['key'],
 ): VNode[] {
   let ret: VNode[] = []
-  let keyedFragmentCount = 0
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
     // #5360 inherit parent key in case of <template v-for>
@@ -563,7 +562,6 @@ export function getTransitionRawChildren(
         : String(parentKey) + String(child.key != null ? child.key : i)
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
-      if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
       ret = ret.concat(
         getTransitionRawChildren(child.children as VNode[], keepComment, key),
       )
@@ -571,15 +569,6 @@ export function getTransitionRawChildren(
     // comment placeholders should be skipped, e.g. v-if
     else if (keepComment || child.type !== Comment) {
       ret.push(key != null ? cloneVNode(child, { key }) : child)
-    }
-  }
-  // #1126 if a transition children list contains multiple sub fragments, these
-  // fragments will be merged into a flat children array. Since each v-for
-  // fragment may contain different static bindings inside, we need to de-op
-  // these children to force full diffs to ensure correct behavior.
-  if (keyedFragmentCount > 1) {
-    for (let i = 0; i < ret.length; i++) {
-      ret[i].patchFlag = PatchFlags.BAIL
     }
   }
   return ret

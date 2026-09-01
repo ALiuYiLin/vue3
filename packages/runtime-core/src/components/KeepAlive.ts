@@ -68,7 +68,6 @@ export interface KeepAliveContext extends ComponentRenderContext {
     container: RendererElement,
     anchor: RendererNode | null,
     namespace: ElementNamespace,
-    optimized: boolean,
   ) => void
   deactivate: (vnode: VNode) => void
 }
@@ -128,13 +127,7 @@ const KeepAliveImpl: ComponentOptions = {
     } = sharedContext
     const storageContainer = createElement('div')
 
-    sharedContext.activate = (
-      vnode,
-      container,
-      anchor,
-      namespace,
-      optimized,
-    ) => {
+    sharedContext.activate = (vnode, container, anchor, namespace) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
@@ -147,7 +140,6 @@ const KeepAliveImpl: ComponentOptions = {
         parentSuspense,
         namespace,
         vnode.slotScopeIds,
-        optimized,
       )
       queuePostRenderEffect(() => {
         instance.isDeactivated = false

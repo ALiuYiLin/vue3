@@ -1,5 +1,5 @@
 import type { Data } from '../component'
-import type { RawSlots, Slots } from '../componentSlots'
+import type { Slots } from '../componentSlots'
 import {
   type ContextualRenderFn,
   currentRenderingInstance,
@@ -9,12 +9,10 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
-  createBlock,
   createVNode,
   isVNode,
-  openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
+import { isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -37,20 +35,13 @@ export function renderSlot(
       isAsyncWrapper(currentRenderingInstance!.parent) &&
       currentRenderingInstance!.parent.ce)
   ) {
-    const hasProps = Object.keys(props).length > 0
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
     // element gets replaced by injected content
     if (name !== 'default') props.name = name
-    return (
-      openBlock(),
-      createBlock(
-        Fragment,
-        null,
-        [createVNode('slot', props, fallback && fallback())],
-        hasProps ? PatchFlags.BAIL : PatchFlags.STABLE_FRAGMENT,
-      )
-    )
+    return createVNode(Fragment, null, [
+      createVNode('slot', props, fallback && fallback()),
+    ])
   }
 
   let slot = slots[name]
@@ -71,14 +62,13 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = false
   }
-  openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
   const slotKey =
     props.key ||
     // slot content array of a dynamic conditional slot may have a branch
     // key attached in the `createSlots` helper, respect that
     (validSlotContent && (validSlotContent as any).key)
-  const rendered = createBlock(
+  const rendered = createVNode(
     Fragment,
     {
       key:
@@ -87,9 +77,6 @@ export function renderSlot(
         (!validSlotContent && fallback ? '_fb' : ''),
     },
     validSlotContent || (fallback ? fallback() : []),
-    validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
-      ? PatchFlags.STABLE_FRAGMENT
-      : PatchFlags.BAIL,
   )
   if (!noSlotted && rendered.scopeId) {
     rendered.slotScopeIds = [rendered.scopeId + '-s']

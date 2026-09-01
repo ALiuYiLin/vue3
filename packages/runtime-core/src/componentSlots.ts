@@ -166,17 +166,13 @@ const normalizeVNodeSlots = (
   instance.slots.default = () => normalized
 }
 
-const assignSlots = (
-  slots: InternalSlots,
-  children: Slots,
-  optimized: boolean,
-) => {
+const assignSlots = (slots: InternalSlots, children: Slots) => {
   for (const key in children) {
     // #2893
     // when rendering the optimized slots by manually written render function,
     // do not copy the `slots._` compiler flag so that `renderSlot` creates
     // slot Fragment with BAIL patchFlag to force full updates
-    if (optimized || !isInternalKey(key)) {
+    if (!isInternalKey(key)) {
       slots[key] = children[key]
     }
   }
@@ -185,15 +181,14 @@ const assignSlots = (
 export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
-  optimized: boolean,
 ): void => {
   const slots = (instance.slots = createInternalObject())
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const type = (children as RawSlots)._
     if (type) {
-      assignSlots(slots, children as Slots, optimized)
+      assignSlots(slots, children as Slots)
       // make compiler marker non-enumerable
-      if (optimized) {
+      if (type === SlotFlags.STABLE) {
         def(slots, '_', type, true)
       }
     } else {
@@ -207,7 +202,6 @@ export const initSlots = (
 export const updateSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
-  optimized: boolean,
 ): void => {
   const { vnode, slots } = instance
   let needDeletionCheck = true
@@ -219,16 +213,16 @@ export const updateSlots = (
       if (__DEV__ && isHmrUpdating) {
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
-        assignSlots(slots, children as Slots, optimized)
+        assignSlots(slots, children as Slots)
         trigger(instance, TriggerOpTypes.SET, '$slots')
-      } else if (optimized && type === SlotFlags.STABLE) {
+      } else if (type === SlotFlags.STABLE) {
         // compiled AND stable.
         // no need to update, and skip stale slots removal.
         needDeletionCheck = false
       } else {
         // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
         // normalization.
-        assignSlots(slots, children as Slots, optimized)
+        assignSlots(slots, children as Slots)
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable

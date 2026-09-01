@@ -8,12 +8,10 @@ import {
   type RendererNode,
   type RendererOptions,
   queuePostRenderEffect,
-  traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { ShapeFlags, isString } from '@vue/shared'
 import { warn } from '../warning'
-import { isHmrUpdating } from '../hmr'
 import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
@@ -87,25 +85,15 @@ export const TeleportImpl = {
     parentSuspense: SuspenseBoundary | null,
     namespace: ElementNamespace,
     slotScopeIds: string[] | null,
-    optimized: boolean,
     internals: RendererInternals,
   ): void {
     const {
       mc: mountChildren,
       pc: patchChildren,
-      pbc: patchBlockChildren,
       o: { insert, querySelector, createText, createComment, parentNode },
     } = internals
 
     const disabled = isTeleportDisabled(n2.props)
-    let { dynamicChildren } = n2
-
-    // #3302
-    // HMR updated, force full diff
-    if (__DEV__ && isHmrUpdating) {
-      optimized = false
-      dynamicChildren = null
-    }
 
     const mount = (
       vnode: TeleportVNode,
@@ -123,7 +111,6 @@ export const TeleportImpl = {
           parentSuspense,
           namespace,
           slotScopeIds,
-          optimized,
         )
       }
     }
@@ -227,35 +214,16 @@ export const TeleportImpl = {
         namespace = 'mathml'
       }
 
-      if (dynamicChildren) {
-        // fast path when the teleport happens to be a block root
-        patchBlockChildren(
-          n1.dynamicChildren!,
-          dynamicChildren,
-          currentContainer,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-        )
-        // even in block tree mode we need to make sure all root-level nodes
-        // in the teleport inherit previous DOM references so that they can
-        // be moved in future patches.
-        // in dev mode, deep traversal is necessary for HMR
-        traverseStaticChildren(n1, n2, !__DEV__)
-      } else if (!optimized) {
-        patchChildren(
-          n1,
-          n2,
-          currentContainer,
-          currentAnchor,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-          false,
-        )
-      }
+      patchChildren(
+        n1,
+        n2,
+        currentContainer,
+        currentAnchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+        slotScopeIds,
+      )
 
       if (disabled) {
         if (!wasDisabled) {
@@ -354,13 +322,7 @@ export const TeleportImpl = {
     ) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
-        unmount(
-          child,
-          parentComponent,
-          parentSuspense,
-          shouldRemove,
-          !!child.dynamicChildren,
-        )
+        unmount(child, parentComponent, parentSuspense, shouldRemove)
       }
     }
   },
@@ -426,7 +388,6 @@ function hydrateTeleport(
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   slotScopeIds: string[] | null,
-  optimized: boolean,
   {
     o: { nextSibling, parentNode, querySelector, insert, createText },
   }: RendererInternals<Node, Element>,
@@ -437,7 +398,6 @@ function hydrateTeleport(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
-    optimized: boolean,
   ) => Node | null,
 ): Node | null {
   // lookahead until we find the target anchor
@@ -471,7 +431,6 @@ function hydrateTeleport(
       parentComponent,
       parentSuspense,
       slotScopeIds,
-      optimized,
     )
   }
 
@@ -518,7 +477,6 @@ function hydrateTeleport(
           parentComponent,
           parentSuspense,
           slotScopeIds,
-          optimized,
         )
       }
     }

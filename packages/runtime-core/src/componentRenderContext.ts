@@ -1,6 +1,5 @@
 import type { ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
-import { setBlockTracking } from './vnode'
 
 /**
  * mark the current rendering instance for asset resolution (e.g.
@@ -80,30 +79,15 @@ export function withCtx(
   }
 
   const renderFnWithContext: ContextualRenderFn = (...args: any[]) => {
-    // If a user calls a compiled slot inside a template expression (#1745), it
-    // can mess up block tracking, so by default we disable block tracking and
-    // force bail out when invoking a compiled slot (indicated by the ._d flag).
-    // This isn't necessary if rendering a compiled `<slot>`, so we flip the
-    // ._d flag off when invoking the wrapped fn inside `renderSlot`.
-    if (renderFnWithContext._d) {
-      setBlockTracking(-1)
-    }
     const prevInstance = setCurrentRenderingInstance(ctx)
-    let res
     try {
-      res = fn(...args)
+      return fn(...args)
     } finally {
       setCurrentRenderingInstance(prevInstance)
-      if (renderFnWithContext._d) {
-        setBlockTracking(1)
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        devtoolsComponentUpdated(ctx)
       }
     }
-
-    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      devtoolsComponentUpdated(ctx)
-    }
-
-    return res
   }
 
   // mark normalized to avoid duplicated wrapping

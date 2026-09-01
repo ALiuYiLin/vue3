@@ -3,15 +3,12 @@ import {
   type Ref,
   type TestElement,
   createApp,
-  createBlock,
-  createElementBlock,
   createElementVNode,
   createVNode,
   defineComponent,
   h,
   nextTick,
   nodeOps,
-  openBlock,
   ref,
   render,
   serializeInner,
@@ -405,18 +402,15 @@ describe('useModel', () => {
         foo = useModel(props, 'modelValue')
         return () => {
           childRender()
-          return (
-            openBlock(),
-            createElementBlock(Fragment, null, [
-              createVNode(Comp, null, {
-                default: () => {
-                  slotRender()
-                  return createElementVNode('div', null, foo.value)
-                },
-                _: 1 /* STABLE */,
-              }),
-            ])
-          )
+          return createVNode(Fragment, null, [
+            createVNode(Comp, null, {
+              default: () => {
+                slotRender()
+                return createElementVNode('div', null, foo.value)
+              },
+              _: 1 /* STABLE */,
+            }),
+          ])
         }
       },
     })
@@ -426,18 +420,13 @@ describe('useModel', () => {
     const root = nodeOps.createElement('div')
     createApp({
       render() {
-        return (
-          openBlock(),
-          createBlock(
-            Child,
-            {
-              modelValue: msg.value,
-              'onUpdate:modelValue': setValue,
-            },
-            null,
-            8 /* PROPS */,
-            ['modelValue'],
-          )
+        return createVNode(
+          Child,
+          {
+            modelValue: msg.value,
+            'onUpdate:modelValue': setValue,
+          },
+          null,
         )
       },
     }).mount(root)
