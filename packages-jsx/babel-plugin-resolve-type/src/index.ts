@@ -2,12 +2,12 @@ import { codeFrameColumns } from '@babel/code-frame'
 import { addNamed } from '@babel/helper-module-imports'
 import { declare } from '@babel/helper-plugin-utils'
 import { parseExpression } from '@babel/parser'
-import {
-  extractRuntimeEmits,
-  extractRuntimeProps,
-  type SimpleTypeResolveContext,
-  type SimpleTypeResolveOptions,
-} from '@vue/compiler-sfc'
+import { extractRuntimeEmits } from './extractRuntimeEmits.ts'
+import { extractRuntimeProps } from './extractRuntimeProps.ts'
+import type {
+  SimpleTypeResolveContext,
+  SimpleTypeResolveOptions,
+} from './resolveType.ts'
 import type {
   NodePath,
   PluginAPI,

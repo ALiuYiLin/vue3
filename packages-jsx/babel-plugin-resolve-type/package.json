@@ -42,7 +42,9 @@
     "@babel/helper-module-imports": "catalog:",
     "@babel/helper-plugin-utils": "catalog:",
     "@babel/parser": "^8.0.4",
-    "@vue/compiler-sfc": "catalog:"
+    "@babel/types": "^8.0.4",
+    "@vue/shared": "catalog:",
+    "minimatch": "~10.2.5"
   },
   "devDependencies": {
     "@babel/core": "catalog:",
