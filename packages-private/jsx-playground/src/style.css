@@ -1,0 +1,101 @@
+:root {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: #101014;
+  color: #e8e8ec;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin-bottom: 4px;
+}
+
+.tagline {
+  color: #9a9aa5;
+}
+
+.tagline code,
+footer code {
+  background: #26262e;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+section {
+  border: 1px solid #2c2c36;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+
+section h2 {
+  margin-top: 0;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #b7b7c4;
+}
+
+button {
+  background: #3b3bf0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.count {
+  display: inline-block;
+  min-width: 40px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.double {
+  color: #7fd0a0;
+}
+
+.card {
+  border: 1px dashed #56566b;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.card-msg {
+  margin: 6px 0 0;
+  color: #8fd0ff;
+}
+
+.todos {
+  list-style: none;
+  padding: 0;
+}
+
+.todos li {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #1b1b22;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.todos li.done {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+footer {
+  color: #6f6f7d;
+  font-size: 13px;
+}
