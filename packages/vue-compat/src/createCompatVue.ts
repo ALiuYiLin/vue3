@@ -4,9 +4,6 @@ import { initDev } from './dev'
 import {
   type CompatVue,
   DeprecationTypes,
-  KeepAlive,
-  Transition,
-  TransitionGroup,
   compatUtils,
   createApp,
   vModelDynamic,
@@ -27,9 +24,6 @@ function wrappedCreateApp(...args: any[]) {
     // register built-in components so that they can be resolved via strings
     // in the legacy h() call. The __compat__ prefix is to ensure that v3 h()
     // doesn't get affected.
-    app.component('__compat__transition', Transition)
-    app.component('__compat__transition-group', TransitionGroup)
-    app.component('__compat__keep-alive', KeepAlive)
     // built-in directives. No need for prefix since there's no render fn API
     // for resolving directives via string in v3.
     app._context.directives.show = vShow

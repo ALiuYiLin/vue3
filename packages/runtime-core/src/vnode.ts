@@ -28,23 +28,9 @@ import {
   toRaw,
 } from '@vue/reactivity'
 import type { AppContext } from './apiCreateApp'
-import {
-  type Suspense,
-  type SuspenseBoundary,
-  type SuspenseImpl,
-  isSuspense,
-} from './components/Suspense'
 import type { DirectiveBinding } from './directives'
-import {
-  type TransitionHooks,
-  setTransitionHooks,
-} from './components/BaseTransition'
+import type { TransitionHooks } from './transition'
 import { warn } from './warning'
-import {
-  type Teleport,
-  type TeleportImpl,
-  isTeleport,
-} from './components/Teleport'
 import {
   currentRenderingInstance,
   currentScopeId,
@@ -77,10 +63,6 @@ export type VNodeTypes =
   | typeof Static
   | typeof Comment
   | typeof Fragment
-  | typeof Teleport
-  | typeof TeleportImpl
-  | typeof Suspense
-  | typeof SuspenseImpl
 
 export type VNodeRef =
   | string
@@ -206,17 +188,6 @@ export interface VNode<
    */
   staticCount: number
 
-  // suspense
-  suspense: SuspenseBoundary | null
-  /**
-   * @internal
-   */
-  ssContent: VNode | null
-  /**
-   * @internal
-   */
-  ssFallback: VNode | null
-
   // optimization only
   shapeFlag: number
 
@@ -332,9 +303,6 @@ function createBaseVNode(
     slotScopeIds: null,
     children,
     component: null,
-    suspense: null,
-    ssContent: null,
-    ssFallback: null,
     dirs: null,
     transition: null,
     el: null,
@@ -350,10 +318,6 @@ function createBaseVNode(
 
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
-    // normalize suspense children
-    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-      ;(type as typeof SuspenseImpl).normalize(vnode)
-    }
   } else if (children) {
     // compiled element vnode - if children is passed, only possible types are
     // string or Array.
@@ -435,15 +399,11 @@ function _createVNode(
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
-    : __FEATURE_SUSPENSE__ && isSuspense(type)
-      ? ShapeFlags.SUSPENSE
-      : isTeleport(type)
-        ? ShapeFlags.TELEPORT
-        : isObject(type)
-          ? ShapeFlags.STATEFUL_COMPONENT
-          : isFunction(type)
-            ? ShapeFlags.FUNCTIONAL_COMPONENT
-            : 0
+    : isObject(type)
+      ? ShapeFlags.STATEFUL_COMPONENT
+      : isFunction(type)
+        ? ShapeFlags.FUNCTIONAL_COMPONENT
+        : 0
 
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
@@ -511,25 +471,12 @@ export function cloneVNode<T, U>(
     // them since them being non-null during a mount doesn't affect the logic as
     // they will simply be overwritten.
     component: vnode.component,
-    suspense: vnode.suspense,
-    ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
-    ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     placeholder: vnode.placeholder,
 
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
     ce: vnode.ce,
-  }
-
-  // if the vnode will be replaced by the cloned one, it is necessary
-  // to clone the transition to ensure that the vnode referenced within
-  // the transition hooks is fresh.
-  if (transition && cloneTransition) {
-    setTransitionHooks(
-      cloned as VNode,
-      transition.clone(cloned as VNode) as TransitionHooks,
-    )
   }
 
   if (__COMPAT__) {

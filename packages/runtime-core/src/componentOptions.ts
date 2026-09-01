@@ -31,11 +31,9 @@ import { inject, provide } from './apiInject'
 import {
   type DebuggerHook,
   type ErrorCapturedHook,
-  onActivated,
   onBeforeMount,
   onBeforeUnmount,
   onBeforeUpdate,
-  onDeactivated,
   onErrorCaptured,
   onMounted,
   onRenderTracked,
@@ -545,8 +543,6 @@ export function applyOptions(instance: ComponentInternalInstance): void {
     mounted,
     beforeUpdate,
     updated,
-    activated,
-    deactivated,
     beforeDestroy,
     beforeUnmount,
     destroyed,
@@ -727,8 +723,6 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   registerLifecycleHook(onMounted, mounted)
   registerLifecycleHook(onBeforeUpdate, beforeUpdate)
   registerLifecycleHook(onUpdated, updated)
-  registerLifecycleHook(onActivated, activated)
-  registerLifecycleHook(onDeactivated, deactivated)
   registerLifecycleHook(onErrorCaptured, errorCaptured)
   registerLifecycleHook(onRenderTracked, renderTracked)
   registerLifecycleHook(onRenderTriggered, renderTriggered)

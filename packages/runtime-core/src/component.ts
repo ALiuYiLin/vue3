@@ -72,7 +72,7 @@ import {
   isPromise,
   makeMap,
 } from '@vue/shared'
-import type { SuspenseBoundary } from './components/Suspense'
+import type { SuspenseBoundary } from './suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -85,13 +85,6 @@ import {
 } from './compat/compatConfig'
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
-
-// Augment GlobalComponents
-import type { TeleportProps } from './components/Teleport'
-import type { SuspenseProps } from './components/Suspense'
-import type { KeepAliveProps } from './components/KeepAlive'
-import type { BaseTransitionProps } from './components/BaseTransition'
-import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
@@ -178,12 +171,7 @@ export interface GlobalDirectives {}
  * }
  * ```
  */
-export interface GlobalComponents {
-  Teleport: DefineComponent<TeleportProps>
-  Suspense: DefineComponent<SuspenseProps>
-  KeepAlive: DefineComponent<KeepAliveProps>
-  BaseTransition: DefineComponent<BaseTransitionProps>
-}
+export interface GlobalComponents {}
 
 /**
  * Default allowed non-declared props on component in TSX
@@ -898,23 +886,10 @@ function setupStatefulComponent(
           .catch(e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
           })
-      } else if (__FEATURE_SUSPENSE__) {
-        // async setup returned Promise.
-        // bail here and wait for re-entry.
-        instance.asyncDep = setupResult
-        if (__DEV__ && !instance.suspense) {
-          const name = formatComponentName(instance, Component)
-          warn(
-            `Component <${name}>: setup function returned a promise, but no ` +
-              `<Suspense> boundary was found in the parent component tree. ` +
-              `A component with async setup() must be nested in a <Suspense> ` +
-              `in order to be rendered.`,
-          )
-        }
       } else if (__DEV__) {
         warn(
-          `setup() returned a Promise, but the version of Vue you are using ` +
-            `does not support it yet.`,
+          `setup() returned a Promise, but async setup is not supported ` +
+            `without <Suspense> in this build.`,
         )
       }
     } else {

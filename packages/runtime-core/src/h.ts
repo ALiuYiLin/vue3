@@ -8,8 +8,6 @@ import {
   createVNode,
   isVNode,
 } from './vnode'
-import type { Teleport, TeleportProps } from './components/Teleport'
-import type { Suspense, SuspenseProps } from './components/Suspense'
 import { type IfAny, isArray, isObject } from '@vue/shared'
 import type { RawSlots } from './componentSlots'
 import type {
@@ -119,21 +117,6 @@ export function h(
   type: typeof Fragment,
   props?: RawProps | null,
   children?: VNodeArrayChildren,
-): VNode
-
-// teleport (target prop is required)
-export function h(
-  type: typeof Teleport,
-  props: RawProps & TeleportProps,
-  children: RawChildren | RawSlots,
-): VNode
-
-// suspense
-export function h(type: typeof Suspense, children?: RawChildren): VNode
-export function h(
-  type: typeof Suspense,
-  props?: (RawProps & SuspenseProps) | null,
-  children?: RawChildren | RawSlots,
 ): VNode
 
 // functional component

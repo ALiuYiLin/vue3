@@ -15,7 +15,6 @@ import { onUnmounted } from './apiLifecycle'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
-import { isKeepAlive } from './components/KeepAlive'
 import { markAsyncBoundary } from './helpers/useId'
 import { type HydrationStrategy, forEachElement } from './hydrationStrategies'
 
@@ -234,11 +233,6 @@ export function defineAsyncComponent<
         .then(() => {
           if (instance.isUnmounted) return
           loaded.value = true
-          if (instance.parent && isKeepAlive(instance.parent.vnode)) {
-            // parent is keep-alive, force update so the loaded component's
-            // name is taken into account
-            instance.parent.update()
-          }
         })
         .catch(err => {
           if (instance.isUnmounted) {

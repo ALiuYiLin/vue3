@@ -33,12 +33,7 @@ import {
 } from '@vue/shared'
 import { type RendererInternals, needTransition } from './renderer'
 import { setRef } from './rendererTemplateRef'
-import {
-  type SuspenseBoundary,
-  type SuspenseImpl,
-  queueEffectWithSuspense,
-} from './components/Suspense'
-import type { TeleportImpl, TeleportVNode } from './components/Teleport'
+import { type SuspenseBoundary, queueEffectWithSuspense } from './suspense'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { updateHOCHostEl } from './componentRenderUtils'
 
@@ -313,31 +308,6 @@ export function createHydrationFunctions(
             subTree.el = node
             vnode.component!.subTree = subTree
           }
-        } else if (shapeFlag & ShapeFlags.TELEPORT) {
-          if (domType !== DOMNodeTypes.COMMENT) {
-            nextNode = onMismatch()
-          } else {
-            nextNode = (vnode.type as typeof TeleportImpl).hydrate(
-              node,
-              vnode as TeleportVNode,
-              parentComponent,
-              parentSuspense,
-              slotScopeIds,
-              rendererInternals,
-              hydrateChildren,
-            )
-          }
-        } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          nextNode = (vnode.type as typeof SuspenseImpl).hydrate(
-            node,
-            vnode,
-            parentComponent,
-            parentSuspense,
-            getContainerType(parentNode(node)!),
-            slotScopeIds,
-            rendererInternals,
-            hydrateNode,
-          )
         } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
           warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }

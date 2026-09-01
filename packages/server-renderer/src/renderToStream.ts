@@ -9,7 +9,6 @@ import {
 import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 import type { Readable, Writable } from 'node:stream'
-import { resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
 
@@ -75,7 +74,6 @@ export function renderToSimpleStream<T extends SimpleReadable>(
 
   Promise.resolve(renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
-    .then(() => resolveTeleports(context))
     .then(() => {
       if (context.__watcherHandles) {
         for (const unwatch of context.__watcherHandles) {

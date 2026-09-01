@@ -1,7 +1,6 @@
 import {
   type App,
   type CreateAppFunction,
-  type DefineComponent,
   DeprecationTypes,
   type Directive,
   type ElementNamespace,
@@ -28,8 +27,6 @@ import {
   isSVGTag,
   isString,
 } from '@vue/shared'
-import type { TransitionProps } from './components/Transition'
-import type { TransitionGroupProps } from './components/TransitionGroup'
 import type { vShow } from './directives/vShow'
 import type { VOnDirective } from './directives/vOn'
 import type { VModelDirective } from './directives/vModel'
@@ -52,11 +49,6 @@ declare module '@vue/runtime-core' {
   interface AllowedAttrs {
     class?: ClassValue
     style?: StyleValue
-  }
-
-  interface GlobalComponents {
-    Transition: DefineComponent<TransitionProps>
-    TransitionGroup: DefineComponent<TransitionGroupProps>
   }
 
   interface GlobalDirectives {
@@ -270,13 +262,6 @@ export {
 // SFC CSS utilities
 export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
-
-// DOM-only components
-export { Transition, type TransitionProps } from './components/Transition'
-export {
-  TransitionGroup,
-  type TransitionGroupProps,
-} from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers
 export {

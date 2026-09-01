@@ -1,10 +1,8 @@
 import {
-  KeepAlive,
   TrackOpTypes,
   h,
   nextTick,
   nodeOps,
-  onActivated,
   onBeforeMount,
   onBeforeUnmount,
   onBeforeUpdate,
@@ -432,35 +430,5 @@ describe('api: lifecycle hooks', () => {
     toggle.value = true
     await nextTick()
     expect(fn).toHaveBeenCalledTimes(0)
-  })
-
-  it('immediately trigger unmount during rendering(with KeepAlive)', async () => {
-    const mountedSpy = vi.fn()
-    const activeSpy = vi.fn()
-    const toggle = ref(false)
-
-    const Child = {
-      setup() {
-        onMounted(mountedSpy)
-        onActivated(activeSpy)
-
-        // trigger unmount immediately
-        toggle.value = false
-        return () => h('div')
-      },
-    }
-
-    const Comp = {
-      setup() {
-        return () => h(KeepAlive, [toggle.value ? h(Child) : null])
-      },
-    }
-
-    render(h(Comp), nodeOps.createElement('div'))
-
-    toggle.value = true
-    await nextTick()
-    expect(mountedSpy).toHaveBeenCalledTimes(0)
-    expect(activeSpy).toHaveBeenCalledTimes(0)
   })
 })

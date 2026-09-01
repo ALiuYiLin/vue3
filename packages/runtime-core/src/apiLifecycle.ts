@@ -15,8 +15,6 @@ import {
 } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
 
-export { onActivated, onDeactivated } from './components/KeepAlive'
-
 export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },

@@ -10,7 +10,7 @@ import {
 } from '../src/vnode'
 import type { Data } from '../src/component'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
-import { Teleport, h, isReactive, reactive, ref } from '../src'
+import { h, isReactive, reactive, ref } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -164,14 +164,6 @@ describe('vnode', () => {
       expect(vnode.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
         ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
-      )
-    })
-
-    test('function on Teleport', () => {
-      const vnode = createVNode(Teleport, { to: '#target' }, () => 'foo')
-      expect(vnode.children).toMatchObject([{ type: Text, children: 'foo' }])
-      expect(vnode.shapeFlag).toBe(
-        ShapeFlags.TELEPORT | ShapeFlags.ARRAY_CHILDREN,
       )
     })
 

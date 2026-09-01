@@ -28,7 +28,6 @@ import {
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
-import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
 const {
   createComponentInstance,
@@ -47,11 +46,6 @@ export type Props = Record<string, unknown>
 
 export type SSRContext = {
   [key: string]: any
-  teleports?: Record<string, string>
-  /**
-   * @internal
-   */
-  __teleportBuffers?: Record<string, SSRBuffer>
   /**
    * @internal
    */
@@ -265,10 +259,6 @@ export function renderVNode(
         renderElementVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent, slotScopeId))
-      } else if (shapeFlag & ShapeFlags.TELEPORT) {
-        renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
-      } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        renderVNode(push, vnode.ssContent!, parentComponent, slotScopeId)
       } else {
         warn(
           '[@vue/server-renderer] Invalid VNode type:',
@@ -384,40 +374,4 @@ function applySSRDirectives(
     }
   }
   return mergeProps(rawProps || {}, ...toMerge)
-}
-
-function renderTeleportVNode(
-  push: PushFn,
-  vnode: VNode,
-  parentComponent: ComponentInternalInstance,
-  slotScopeId?: string,
-) {
-  const target = vnode.props && vnode.props.to
-  const disabled = vnode.props && vnode.props.disabled
-  if (!target) {
-    if (!disabled) {
-      warn(`[@vue/server-renderer] Teleport is missing target prop.`)
-    }
-    return []
-  }
-  if (!isString(target)) {
-    warn(
-      `[@vue/server-renderer] Teleport target must be a query selector string.`,
-    )
-    return []
-  }
-  ssrRenderTeleport(
-    push,
-    push => {
-      renderVNodeChildren(
-        push,
-        vnode.children as VNodeArrayChildren,
-        parentComponent,
-        slotScopeId,
-      )
-    },
-    target,
-    disabled || disabled === '',
-    parentComponent,
-  )
 }

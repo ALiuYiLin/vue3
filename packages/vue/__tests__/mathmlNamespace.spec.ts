@@ -5,7 +5,6 @@
 // - runtime-core/src/renderer.ts
 // - compiler-core/src/transforms/transformElement.ts
 
-import { vtcKey } from '../../runtime-dom/src/components/Transition'
 import { h, nextTick, ref, render } from '../src'
 
 describe('MathML support', () => {
@@ -69,12 +68,9 @@ describe('MathML support', () => {
     expect(f1.getAttribute('class')).toBe('foo')
     expect(f2.className).toBe('foo')
 
-    // set a transition class on the <div> - which is only respected on non-svg
-    // patches
-    ;(f2 as any)[vtcKey] = ['baz']
     cls.value = 'bar'
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')
-    expect(f2.className).toBe('bar baz')
+    expect(f2.className).toBe('bar')
   })
 })

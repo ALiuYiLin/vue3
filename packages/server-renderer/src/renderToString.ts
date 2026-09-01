@@ -85,8 +85,6 @@ export async function renderToString(
 
   const result = await unrollBuffer(buffer as SSRBuffer)
 
-  await resolveTeleports(context)
-
   if (context.__watcherHandles) {
     for (const unwatch of context.__watcherHandles) {
       unwatch()
@@ -94,17 +92,4 @@ export async function renderToString(
   }
 
   return result
-}
-
-export async function resolveTeleports(context: SSRContext): Promise<void> {
-  if (context.__teleportBuffers) {
-    context.teleports = context.teleports || {}
-    for (const key in context.__teleportBuffers) {
-      // note: it's OK to await sequentially here because the Promises were
-      // created eagerly in parallel.
-      context.teleports[key] = await unrollBuffer(
-        context.__teleportBuffers[key],
-      )
-    }
-  }
 }

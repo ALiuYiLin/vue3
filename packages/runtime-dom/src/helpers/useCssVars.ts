@@ -67,16 +67,6 @@ export function useCssVars(
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, unknown>) {
-  if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-    const suspense = vnode.suspense!
-    vnode = suspense.activeBranch!
-    if (suspense.pendingBranch && !suspense.isHydrating) {
-      suspense.effects.push(() => {
-        setVarsOnVNode(suspense.activeBranch!, vars)
-      })
-    }
-  }
-
   // drill down HOCs until it's a non-component vnode
   while (vnode.component) {
     vnode = vnode.component.subTree

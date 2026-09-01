@@ -16,7 +16,6 @@ import {
   isFunction,
 } from '@vue/shared'
 import { warn } from './warning'
-import { isKeepAlive } from './components/KeepAlive'
 import {
   type ContextualRenderFn,
   currentRenderingInstance,
@@ -154,7 +153,6 @@ const normalizeVNodeSlots = (
 ) => {
   if (
     __DEV__ &&
-    !isKeepAlive(instance.vnode) &&
     !(__COMPAT__ && isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance))
   ) {
     warn(

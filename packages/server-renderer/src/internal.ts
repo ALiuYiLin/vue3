@@ -2,7 +2,6 @@
 export { renderVNode as ssrRenderVNode } from './render'
 export { ssrRenderComponent } from './helpers/ssrRenderComponent'
 export { ssrRenderSlot, ssrRenderSlotInner } from './helpers/ssrRenderSlot'
-export { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 export {
   ssrRenderClass,
   ssrRenderStyle,
@@ -12,7 +11,6 @@ export {
 } from './helpers/ssrRenderAttrs'
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
-export { ssrRenderSuspense } from './helpers/ssrRenderSuspense'
 export { ssrGetDirectiveProps } from './helpers/ssrGetDirectiveProps'
 export { includeBooleanAttr as ssrIncludeBooleanAttr } from '@vue/shared'
 

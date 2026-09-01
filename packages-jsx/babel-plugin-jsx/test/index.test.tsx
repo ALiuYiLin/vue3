@@ -4,7 +4,6 @@ import {
   defineComponent,
   reactive,
   ref,
-  Transition,
   type ComponentPublicInstance,
   type CSSProperties,
 } from 'vue'
@@ -356,9 +355,7 @@ describe('variables outside slots', () => {
           return (
             <A inc={this.inc}>
               <div>
-                <Transition name="foo">
-                  <textarea id="textarea" {...attrs} />
-                </Transition>
+                <textarea id="textarea" {...attrs} />
               </div>
               <button id="button" onClick={this.inc}>
                 +1

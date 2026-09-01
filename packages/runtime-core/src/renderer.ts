@@ -8,7 +8,6 @@ import {
   type VNodeHook,
   type VNodeProps,
   cloneIfMounted,
-  createVNode,
   invokeVNodeHook,
   isSameVNodeType,
   normalizeVNode,
@@ -57,18 +56,7 @@ import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
 import { type CreateAppFunction, createAppAPI } from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
-import {
-  type SuspenseBoundary,
-  type SuspenseImpl,
-  isSuspense,
-  queueEffectWithSuspense,
-} from './components/Suspense'
-import {
-  TeleportEndKey,
-  type TeleportImpl,
-  type TeleportVNode,
-} from './components/Teleport'
-import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
+import { type SuspenseBoundary, queueEffectWithSuspense } from './suspense'
 import {
   isHmrUpdating,
   registerHMR,
@@ -88,7 +76,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import { type TransitionHooks, leaveCbKey } from './transition'
 import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
@@ -427,30 +415,6 @@ function baseCreateRenderer(
             namespace,
             slotScopeIds,
           )
-        } else if (shapeFlag & ShapeFlags.TELEPORT) {
-          ;(type as typeof TeleportImpl).process(
-            n1 as TeleportVNode,
-            n2 as TeleportVNode,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            internals,
-          )
-        } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          ;(type as typeof SuspenseImpl).process(
-            n1,
-            n2,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            internals,
-          )
         } else if (__DEV__) {
           warn('Invalid VNode type:', type, `(${typeof type})`)
         }
@@ -734,11 +698,7 @@ function baseCreateRenderer(
     }
     if (parentComponent) {
       let subTree = parentComponent.subTree
-      if (
-        vnode === subTree ||
-        (isSuspense(subTree.type) &&
-          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
-      ) {
+      if (vnode === subTree) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
@@ -939,23 +899,14 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
-      if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-        ;(parentComponent!.ctx as KeepAliveContext).activate(
-          n2,
-          container,
-          anchor,
-          namespace,
-        )
-      } else {
-        mountComponent(
-          n2,
-          container,
-          anchor,
-          parentComponent,
-          parentSuspense,
-          namespace,
-        )
-      }
+      mountComponent(
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        namespace,
+      )
     } else {
       updateComponent(n1, n2)
     }
@@ -990,11 +941,6 @@ function baseCreateRenderer(
       startMeasure(instance, `mount`)
     }
 
-    // inject renderer internals for keepAlive
-    if (isKeepAlive(initialVNode)) {
-      ;(instance.ctx as KeepAliveContext).renderer = internals
-    }
-
     // resolve props and slots for setup context
     if (!(__COMPAT__ && compatMountInstance)) {
       if (__DEV__) {
@@ -1009,28 +955,14 @@ function baseCreateRenderer(
     // avoid hydration for hmr updating
     if (__DEV__ && isHmrUpdating) initialVNode.el = null
 
-    // setup() is async. This component relies on async logic to be resolved
-    // before proceeding
-    if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect)
-
-      // Give it a placeholder if this is not hydration
-      // TODO handle self-defined fallback
-      if (!initialVNode.el) {
-        const placeholder = (instance.subTree = createVNode(Comment))
-        processCommentNode(null, placeholder, container!, anchor)
-        initialVNode.placeholder = placeholder.el
-      }
-    } else {
-      setupRenderEffect(
-        instance,
-        initialVNode,
-        container,
-        anchor,
-        parentSuspense,
-        namespace,
-      )
-    }
+    setupRenderEffect(
+      instance,
+      initialVNode,
+      container,
+      anchor,
+      parentSuspense,
+      namespace,
+    )
 
     if (__DEV__) {
       popWarningContext()
@@ -1041,27 +973,10 @@ function baseCreateRenderer(
   const updateComponent = (n1: VNode, n2: VNode) => {
     const instance = (n2.component = n1.component)!
     if (shouldUpdateComponent(n1, n2)) {
-      if (
-        __FEATURE_SUSPENSE__ &&
-        instance.asyncDep &&
-        !instance.asyncResolved
-      ) {
-        // async & still pending - just update props and slots
-        // since the component's reactive effect for render isn't set-up yet
-        if (__DEV__) {
-          pushWarningContext(n2)
-        }
-        updateComponentPreRender(instance, n2)
-        if (__DEV__) {
-          popWarningContext()
-        }
-        return
-      } else {
-        // normal update
-        instance.next = n2
-        // instance.update is the reactive effect.
-        instance.update()
-      }
+      // normal update
+      instance.next = n2
+      // instance.update is the reactive effect.
+      instance.update()
     } else {
       // no update needed. just copy over properties
       n2.el = n1.el
@@ -1199,26 +1114,6 @@ function baseCreateRenderer(
           )
         }
 
-        // activated hook for keep-alive roots.
-        // #1742 activated hook must be accessed after first render
-        // since the hook may be injected by a child keep-alive
-        if (
-          initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
-          (parent &&
-            isAsyncWrapper(parent.vnode) &&
-            parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
-        ) {
-          instance.a && queuePostRenderEffect(instance.a, parentSuspense)
-          if (
-            __COMPAT__ &&
-            isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-          ) {
-            queuePostRenderEffect(
-              () => instance.emit('hook:activated'),
-              parentSuspense,
-            )
-          }
-        }
         instance.isMounted = true
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -1229,27 +1124,6 @@ function baseCreateRenderer(
         initialVNode = container = anchor = null as any
       } else {
         let { next, bu, u, parent, vnode } = instance
-
-        if (__FEATURE_SUSPENSE__) {
-          const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
-          // we are trying to update some async comp before hydration
-          // this will cause crash because we don't know the root node yet
-          if (nonHydratedAsyncRoot) {
-            // only sync the properties and abort the rest of operations
-            if (next) {
-              next.el = vnode.el
-              updateComponentPreRender(instance, next)
-            }
-            // and continue the rest of operations once the deps are resolved
-            nonHydratedAsyncRoot.asyncDep!.then(() => {
-              // the instance may be destroyed during the time period
-              queuePostRenderEffect(() => {
-                if (!instance.isUnmounted) update()
-              }, parentSuspense)
-            })
-            return
-          }
-        }
 
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
@@ -1705,16 +1579,6 @@ function baseCreateRenderer(
       return
     }
 
-    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-      vnode.suspense!.move(container, anchor, moveType)
-      return
-    }
-
-    if (shapeFlag & ShapeFlags.TELEPORT) {
-      ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
-      return
-    }
-
     if (type === Fragment) {
       hostInsert(el!, container, anchor)
       for (let i = 0; i < (children as VNode[]).length; i++) {
@@ -1805,11 +1669,6 @@ function baseCreateRenderer(
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
-      return
-    }
-
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
     const shouldInvokeVnodeHook = !isAsyncWrapper(vnode)
 
@@ -1824,24 +1683,11 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.COMPONENT) {
       unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
-      if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-        vnode.suspense!.unmount(parentSuspense, doRemove)
-        return
-      }
-
       if (shouldInvokeDirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
       }
 
-      if (shapeFlag & ShapeFlags.TELEPORT) {
-        ;(vnode.type as typeof TeleportImpl).remove(
-          vnode,
-          parentComponent,
-          parentSuspense,
-          internals,
-          doRemove,
-        )
-      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
@@ -1993,15 +1839,8 @@ function baseCreateRenderer(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       return getNextHostNode(vnode.component!.subTree)
     }
-    if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-      return vnode.suspense!.next()
-    }
     const el = hostNextSibling((vnode.anchor || vnode.el)!)
-    // #9071, #9313
-    // teleported content can mess up nextSibling searches during patch so
-    // we need to skip them during nextSibling search
-    const teleportEnd = el && el[TeleportEndKey]
-    return teleportEnd ? hostNextSibling(teleportEnd) : el
+    return el
   }
 
   let isFlushing = false
@@ -2183,19 +2022,6 @@ function getSequence(arr: number[]): number[] {
     v = p[v]
   }
   return result
-}
-
-function locateNonHydratedAsyncRoot(
-  instance: ComponentInternalInstance,
-): ComponentInternalInstance | undefined {
-  const subComponent = instance.subTree.component
-  if (subComponent) {
-    if (subComponent.asyncDep && !subComponent.asyncResolved) {
-      return subComponent
-    } else {
-      return locateNonHydratedAsyncRoot(subComponent)
-    }
-  }
 }
 
 export function invalidateMount(hooks: LifecycleHook): void {

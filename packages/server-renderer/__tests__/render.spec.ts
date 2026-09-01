@@ -1,7 +1,5 @@
 import {
   type ComponentOptions,
-  KeepAlive,
-  Transition,
   computed,
   createApp,
   createCommentVNode,
@@ -694,23 +692,7 @@ function testRender(type: string, render: typeof renderToString) {
       })
     })
 
-    describe('vnode component', () => {
-      test('KeepAlive', async () => {
-        const MyComp = {
-          render: () => h('p', 'hello'),
-        }
-        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(`<p>hello</p>`)
-      })
-
-      test('Transition', async () => {
-        const MyComp = {
-          render: () => h('p', 'hello'),
-        }
-        expect(await render(h(Transition, () => h(MyComp)))).toBe(
-          `<p>hello</p>`,
-        )
-      })
-    })
+    describe('vnode component', () => {})
 
     describe('raw vnode types', () => {
       test('Text', async () => {

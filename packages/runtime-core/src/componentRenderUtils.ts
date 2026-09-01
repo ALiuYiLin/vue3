@@ -32,7 +32,6 @@ import {
   warnDeprecation,
 } from './compat/compatConfig'
 import { shallowReadonly } from '@vue/reactivity'
-import { setTransitionHooks } from './components/BaseTransition'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -239,16 +238,6 @@ export function renderComponentRoot(
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data
-  if (vnode.transition) {
-    if (__DEV__ && !isElementRoot(root)) {
-      warn(
-        `Component inside <Transition> renders non-element root node ` +
-          `that cannot be animated.`,
-      )
-    }
-    setTransitionHooks(root, vnode.transition)
-  }
-
   result = root
 
   setCurrentRenderingInstance(prev)
@@ -380,26 +369,16 @@ function hasPropValueChanged(
 }
 
 export function updateHOCHostEl(
-  { vnode, parent, suspense }: ComponentInternalInstance,
+  { vnode, parent }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ): void {
   while (parent) {
     const root = parent.subTree
-    if (root.suspense && root.suspense.activeBranch === vnode) {
-      // Suspense proxies its active branch host node, so keep propagating from
-      // the boundary vnode to any wrapper components above it.
-      root.suspense.vnode.el = root.el = el
-      vnode = root
-    }
     if (root === vnode) {
       ;(vnode = parent.vnode).el = el
       parent = parent.parent
     } else {
       break
     }
-  }
-  // also update suspense vnode el
-  if (suspense && suspense.activeBranch === vnode) {
-    suspense.vnode.el = el
   }
 }

@@ -1,4 +1,3 @@
-import type { SuspenseBoundary } from './components/Suspense'
 import type {
   VNode,
   VNodeNormalizedRef,
@@ -31,7 +30,7 @@ const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 export function setRef(
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
-  parentSuspense: SuspenseBoundary | null,
+  parentSuspense: unknown,
   vnode: VNode,
   isUnmount = false,
 ): void {
@@ -200,7 +199,7 @@ export function setRef(
         }
         job.id = -1
         pendingSetRefMap.set(rawRef, job)
-        queuePostRenderEffect(job, parentSuspense)
+        queuePostRenderEffect(job, parentSuspense as any)
       } else {
         invalidatePendingSetRef(rawRef)
         doSet()

@@ -51,8 +51,6 @@ export {
   onUpdated,
   onBeforeUnmount,
   onUnmounted,
-  onActivated,
-  onDeactivated,
   onRenderTracked,
   onRenderTriggered,
   onErrorCaptured,
@@ -111,15 +109,6 @@ export { h } from './h'
 export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
 export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
-// Built-in components
-export { Teleport, type TeleportProps } from './components/Teleport'
-export { Suspense, type SuspenseProps } from './components/Suspense'
-export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
-export {
-  BaseTransition,
-  BaseTransitionPropsValidators,
-  type BaseTransitionProps,
-} from './components/BaseTransition'
 // For using custom directives
 export { withDirectives } from './directives'
 // SSR context
@@ -147,12 +136,6 @@ export {
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
-export {
-  useTransitionState,
-  resolveTransitionHooks,
-  setTransitionHooks,
-  getTransitionRawChildren,
-} from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
 import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
@@ -332,11 +315,8 @@ export type {
   DirectiveModifiers,
   DirectiveArguments,
 } from './directives'
-export type { SuspenseBoundary } from './components/Suspense'
-export type {
-  TransitionState,
-  TransitionHooks,
-} from './components/BaseTransition'
+export type { SuspenseBoundary } from './suspense'
+export type { TransitionHooks } from './transition'
 export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
