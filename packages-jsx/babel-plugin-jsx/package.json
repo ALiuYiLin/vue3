@@ -54,6 +54,7 @@
   "devDependencies": {
     "@babel/core": "catalog:",
     "@babel/preset-env": "catalog:",
+    "@vue/server-renderer": "^3.5.40",
     "@vue/test-utils": "catalog:",
     "regenerator-runtime": "catalog:",
     "vue": "catalog:"
