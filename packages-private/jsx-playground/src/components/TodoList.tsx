@@ -1,24 +1,29 @@
-import { ref } from 'vue'
+import { defineComponent, ref } from 'vue'
 
-export default function TodoList(props: { items: string[] }) {
-  const done = ref<Set<string>>(new Set())
-  const toggle = (item: string) => {
-    const next = new Set(done.value)
-    next.has(item) ? next.delete(item) : next.add(item)
-    done.value = next
-  }
+export default defineComponent({
+  props: {
+    items: { type: Array, required: true },
+  },
+  setup(props) {
+    const done = ref<Set<string>>(new Set())
+    const toggle = (item: string) => {
+      const next = new Set(done.value)
+      next.has(item) ? next.delete(item) : next.add(item)
+      done.value = next
+    }
 
-  return (
-    <ul class="todos">
-      {props.items.map(item => (
-        <li
-          key={item}
-          class={done.value.has(item) ? 'done' : ''}
-          onClick={() => toggle(item)}
-        >
-          {item}
-        </li>
-      ))}
-    </ul>
-  )
-}
+    return () => (
+      <ul class="todos">
+        {(props.items as string[]).map(item => (
+          <li
+            key={item}
+            class={done.value.has(item) ? 'done' : ''}
+            onClick={() => toggle(item)}
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
+    )
+  },
+})

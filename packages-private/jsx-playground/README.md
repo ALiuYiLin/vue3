@@ -34,3 +34,15 @@ No `pnpm install` is needed after adding this package — the workspace deps
 | Typed props + `onXxx` emit convention | `src/components/Greeting.tsx` |
 | Keyed list rendering | `src/components/TodoList.tsx` |
 | Attrs / props fallthrough | `src/App.tsx` (footer) |
+
+## Important: functional components are stateless
+
+A plain `function Component()` is a *functional* component: the function body runs
+again on every render, so any `ref` / `reactive` created inside it is recreated each
+time and state never survives a re-render (a click that mutates it appears to do
+nothing). This matches Vue's semantics — it is not a fork quirk.
+
+Use `defineComponent({ setup() { ... return () => <div/> } })` whenever the component
+owns state, as `Counter.tsx`, `TodoList.tsx` and `App.tsx` do. Plain function
+components are great for stateless views (`Card.tsx`, `Greeting.tsx`).
+
