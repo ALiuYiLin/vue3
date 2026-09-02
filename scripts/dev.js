@@ -78,7 +78,7 @@ for (const target of targets) {
         ...external,
         ...Object.keys(pkg.dependencies || {}),
         ...Object.keys(pkg.peerDependencies || {}),
-        // for @vue/compiler-sfc / server-renderer
+        // for server-renderer
         'path',
         'url',
         'stream',
