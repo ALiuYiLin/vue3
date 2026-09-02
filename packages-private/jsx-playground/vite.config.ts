@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import babel from '@rolldown/plugin-babel'
-import Jsx from '@vue/babel-plugin-jsx'
+import AutoDefine from '../../packages-jsx/babel-plugin-auto-define-component/src/index.ts'
+import Jsx from '../../packages-jsx/babel-plugin-jsx/src/index.ts'
 import { entries } from '../../scripts/aliases.js'
 
 const flags = {
@@ -37,7 +38,12 @@ export default defineConfig({
     babel({
       babelrc: false,
       configFile: false,
-      plugins: [Jsx],
+      plugins: [
+        Jsx,
+        // React-style function components become stateful
+        // defineComponent wrappers automatically
+        AutoDefine,
+      ],
       include: /\.[jt]sx$/,
     }),
   ],

@@ -20,6 +20,10 @@
       "vue-jsx-source": "./src/index.ts",
       "default": "./dist/index.js"
     },
+    "./src/*": {
+      "vue-jsx-source": "./src/*",
+      "default": "./src/*"
+    },
     "./package.json": "./package.json"
   },
   "files": [

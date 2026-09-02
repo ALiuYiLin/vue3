@@ -1,6 +1,7 @@
 import { entries } from './scripts/aliases.js'
 import babel from '@rolldown/plugin-babel'
 import { defineConfig } from 'vitest/config'
+import AutoDefine from './packages-jsx/babel-plugin-auto-define-component/src/index.ts'
 import Jsx from './packages-jsx/babel-plugin-jsx/src/index.ts'
 
 export default defineConfig({
@@ -38,6 +39,7 @@ export default defineConfig({
             isCustomElement: (tag: string) => tag.startsWith('x-'),
           },
         ],
+        [AutoDefine, {}],
       ],
     }),
   ],
@@ -45,16 +47,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: [
-      // explicit per-package dirs — `packages-jsx/**` would also match the
-      // nested node_modules symlink copies of these packages after install
-      'packages-jsx/babel-plugin-jsx/test/*.{test,spec}.{ts,tsx}',
-      'packages-jsx/babel-plugin-resolve-type/test/*.{test,spec}.{ts,tsx}',
-      'packages-jsx/babel-helper-vue-transform-on/test/*.{test,spec}.{ts,tsx}',
-      'packages-jsx/jsx-explorer/test/*.{test,spec}.{ts,tsx}',
-    ],
-    exclude: [
-      // auto-define tests need their own babel pipeline
-      'packages-jsx/babel-plugin-auto-define-component/**',
+      'packages-jsx/babel-plugin-auto-define-component/test/*.{test,spec}.{ts,tsx}',
     ],
   },
 })

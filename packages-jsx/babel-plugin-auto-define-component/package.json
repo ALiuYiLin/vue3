@@ -1,0 +1,46 @@
+{
+  "name": "@vue/babel-plugin-auto-define-component",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Babel plugin: auto-wrap React-style function components in defineComponent",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "vue-jsx-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json"
+    }
+  },
+  "peerDependencies": {
+    "@babel/core": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@babel/core": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@babel/helper-module-imports": "catalog:",
+    "@babel/helper-plugin-utils": "catalog:",
+    "@babel/parser": "catalog:",
+    "@babel/types": "^8.0.4",
+    "@vue/babel-plugin-resolve-type": "workspace:*",
+    "@vue/shared": "catalog:"
+  },
+  "devDependencies": {
+    "@babel/core": "catalog:",
+    "vue": "catalog:"
+  }
+}
