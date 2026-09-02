@@ -19,8 +19,7 @@
     "isolatedDeclarations": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
-    "baseUrl": "."
+    "skipLibCheck": true
   },
   "include": ["packages-jsx/*/src", "packages-jsx/*/test"]
 }

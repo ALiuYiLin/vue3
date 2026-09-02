@@ -3,6 +3,7 @@ import Card from './components/Card'
 import Counter from './components/Counter'
 import Greeting from './components/Greeting'
 import TodoList from './components/TodoList'
+import { Container } from './components/Container'
 
 // React-style function component — auto-wrapped into defineComponent
 export default function App() {
@@ -30,7 +31,7 @@ export default function App() {
       <section>
         <h2>Function children (slot replacement)</h2>
         <Card title="Card with function children">
-          {props => <p class="card-msg">children fn: {props.msg}</p>}
+          {(props: any) => <p class="card-msg">children fn: {props.msg}</p>}
         </Card>
       </section>
 
@@ -43,6 +44,8 @@ export default function App() {
         <h2>Keyed list</h2>
         <TodoList items={todos.value} />
       </section>
+
+      <Container>1111</Container>
 
       <footer>
         props / attrs fallthrough: <code>{new Date().getFullYear()}</code>

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "vue",
-    "types": []
+    "types": [],
+    "isolatedDeclarations": false
   },
   "include": ["src"]
 }
